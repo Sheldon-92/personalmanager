@@ -1,0 +1,195 @@
+{
+  "main": {
+    "id": "0c13068cfa3201c7",
+    "type": "split",
+    "children": [
+      {
+        "id": "de4b056f43c01c6f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d53dfb59c52d207b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Obsidian定位与插件规划.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Obsidian定位与插件规划"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b296b8963c07715d",
+    "type": "split",
+    "children": [
+      {
+        "id": "b81a74a495eca61d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "3234493a3a0f07fd",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "d36607babbdee393",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "ae7deecfa2d7a430",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "8a7f70e87e5e8d8d",
+    "type": "split",
+    "children": [
+      {
+        "id": "cb12f8cd9fef56ac",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1375656437adb363",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Obsidian定位与插件规划.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for Obsidian定位与插件规划"
+            }
+          },
+          {
+            "id": "901128729214df26",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Obsidian定位与插件规划.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from Obsidian定位与插件规划"
+            }
+          },
+          {
+            "id": "75e7e166ac8f08d1",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "da6a8b6a9d1bab98",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Obsidian定位与插件规划.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of Obsidian定位与插件规划"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "3234493a3a0f07fd",
+  "lastOpenFiles": [
+    "books/Atomic Habits-综述.md",
+    "books/反脆弱 _ 从不确定性中获益 = Antifragile_ Things that gain from disorder -- [美] 纳西姆·尼古拉斯·塔勒布 _ 雨珂 -- 1, 2013 -- 中信出版社 -- 9787508643335 -- a65da1702cde65c59efc005820f4c996 -- Anna’s Archive.pdf",
+    "books/Where Good Ideas Come From (Johnson Steven) (Z-Library).pdf",
+    "books/Ultralearning (Scott H. Young) (Z-Library).pdf",
+    "books/Thinking, Fast and Slow (Daniel Kahneman) (Z-Library).pdf",
+    "books/Thinking in Systems (Donella H. Meadows) (Z-Library).pdf",
+    "books/The Seven Habits of Highly Effective People Restoring the Character Ethic [Text Only, no pictures] (Stephen R. Covey) (Z-Library).pdf",
+    "books/The Power of Full Engagement Managing Energy, Not Time, Is the Key to High Performance and Personal Renewal (Jim Loehr, Tony Schwartz) (Z-Library).pdf",
+    "books/The Phoenix Project A Novel about IT, DevOps, and Helping Your Business Win (Kim, Gene, Behr, Kevin, Spafford, George) (Z-Library).pdf",
+    "books/The Personal MBA (Josh Kaufman) (Z-Library).pdf",
+    "books/The One-Page Project Manager for Execution Drive Strategy and Solve Problems with a Single Sheet of Paper (Clark A. Campbell, Mike Collins) (Z-Library).pdf",
+    "AGENTS.md",
+    "BMAD方案详细设计.md",
+    "项目状态自动维护方案.md",
+    "项目需求分析.md",
+    "项目文件夹集成方案.md",
+    "项目概览与导航.md",
+    "数据架构设计.md",
+    "实施路径规划.md",
+    "技术方案对比.md"
+  ]
+}

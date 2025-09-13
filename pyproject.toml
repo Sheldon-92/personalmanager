@@ -1,0 +1,59 @@
+[tool.poetry]
+name = "personal-manager"
+version = "0.1.0"
+description = "PersonalManager Agent - AI-driven personal management system based on BMAD framework"
+authors = ["PersonalManager Team <noreply@example.com>"]
+readme = "README.md"
+packages = [{include = "pm", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+# CLI框架
+click = "^8.1.7"
+rich = "^13.6.0"
+typer = "^0.9.0"
+# 数据处理
+pydantic = "^2.4.2"
+pydantic-settings = "^2.0.3"
+PyYAML = "^6.0.1"
+# AI工具集成
+anthropic = "^0.3.11"
+google-generativeai = "^0.3.0"
+# 数据存储
+# 监控与日志
+structlog = "^23.1.0"
+watchdog = "^3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+# 代码质量
+black = "^23.9.1"
+isort = "^5.12.0"
+flake8 = "^6.1.0"
+mypy = "^1.6.0"
+pre-commit = "^3.4.0"
+# 测试框架
+pytest = "^7.4.2"
+pytest-cov = "^4.1.0"
+pytest-asyncio = "^0.21.1"
+factory-boy = "^3.3.0"
+
+[tool.poetry.scripts]
+pm = "pm.cli.main:app"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
