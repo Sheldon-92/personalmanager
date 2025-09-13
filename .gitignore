@@ -1,3 +1,54 @@
-# BMAD (local only)
+# OS / Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python build & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.dist-info/
+build/
+dist/
+.venv/
+venv/
+
+# Logs & temp
+*.log
+*.backup
+*.tmp
+
+# Project local data (must never commit)
+.personalmanager/
+.tmp.drivedownload/
+.tmp.driveupload/
+
+# Local agents / editors (machine-specific)
 .bmad-core/
 .bmad-*/
+.claude/
+.gemini/
+.obsidian/
+
+# Reports with local paths / env details
+docs/reports/
+PHASE_1_RELEASE_READINESS_REPORT.md
+
+# Local debug scripts
+test_input_debug.py
+test_minimal_auth.py
+
+# Env / credentials (defense-in-depth)
+.env
+.env.*
+*.env
+*credentials*
+*client_secret*
+
+# Node (for npm bootstrap in Phase 2)
+npm/**/node_modules/
+npm/**/dist/
+npm/**/*.tgz

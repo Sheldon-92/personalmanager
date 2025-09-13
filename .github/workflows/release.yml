@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
+    
+    - name: Install dependencies
+      run: poetry install --no-dev
+    
+    - name: Build package
+      run: poetry build
+    
+    - name: Extract release info
+      id: release_info
+      run: |
+        TAG=${GITHUB_REF#refs/tags/}
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "prerelease=$(echo $TAG | grep -E '(alpha|beta|rc)' && echo true || echo false)" >> $GITHUB_OUTPUT
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        generate_release_notes: true
+        prerelease: ${{ steps.release_info.outputs.prerelease }}
+        body_path: CHANGELOG.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    # NPM publish step (conditional on NPM_TOKEN presence)
+    - name: Set up Node.js
+      if: env.NPM_TOKEN != ''
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        registry-url: 'https://registry.npmjs.org'
+      env:
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
+    - name: Publish npm package
+      if: env.NPM_TOKEN != ''
+      run: |
+        cd npm/pm-bootstrap
+        npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
+    - name: Log npm publish skip
+      if: env.NPM_TOKEN == ''
+      run: echo "NPM_TOKEN not found - skipping npm publish step"

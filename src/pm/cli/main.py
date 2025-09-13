@@ -40,6 +40,7 @@ from pm.cli.commands.habits import (
 from pm.cli.commands.deep_work import deep_work_app
 from pm.cli.commands.review import review_app
 from pm.cli.commands.obsidian import obsidian_app
+from pm.cli.commands.doctor import doctor_app
 
 app = typer.Typer(
     name="pm",
@@ -427,6 +428,9 @@ app.add_typer(deep_work_app, name="deepwork")
 # 回顾与反思管理命令组 - Sprint 16新功能，AI可调用工具架构
 app.add_typer(review_app, name="review")
 app.add_typer(obsidian_app, name="obsidian")
+
+# 系统诊断命令组 - Phase 2新功能，环境自检与诊断
+app.add_typer(doctor_app, name="doctor")
 
 @report_app.command("update")
 def report_update(
