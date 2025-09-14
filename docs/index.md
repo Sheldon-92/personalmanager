@@ -32,6 +32,11 @@ Welcome to the official documentation for the `PersonalManager` project - a pers
 *   [IDEAS_BACKLOG.md](IDEAS_BACKLOG.md): A backlog of ideas and feature requests.
 *   [PROJECT_STATUS.md](PROJECT_STATUS.md): The current status of the project.
 
+### 6. Prompts
+
+*   [PO Persona](prompts/po_persona.md): 产品负责人角色与核心职责定义。
+*   [PO Workflow](prompts/po_workflow.md): 产品负责人标准化工作流程手册。
+
 ---
 **Document Version**: v1.1
 **Last Updated**: 2025-09-13
