@@ -375,6 +375,356 @@ PersonalManager 采用离线优先设计，所有外部集成都是可选的。�
 - `pm privacy` - 隐私管理
 - `pm status` - 系统状态
 
+## Agent 和远程调用
+
+### 概览
+
+PersonalManager 作为"无头 + CLI + Agent 可调用"的个人效能工具包，专门设计用于与 AI Agent 协作。通过项目级启动器 `./bin/pm-local`，AI Agent 可以无缝调用 PersonalManager 的所有功能，将自然语言需求转换为具体的个人效能管理操作。
+
+### 项目级启动器
+
+#### 使用 ./bin/pm-local
+
+项目级启动器是 PersonalManager 的标准化入口点，支持智能环境检测和自适应执行：
+
+```bash
+# 基本命令格式（Agent 使用）
+./bin/pm-local <command> [arguments]
+
+# 环境诊断（调试时使用）
+./bin/pm-local --launcher-debug
+```
+
+**环境自适应**：
+- 优先使用 Poetry 环境：`poetry run pm <command>`
+- 回退到直接 Python 执行：`PYTHONPATH=src python3 -m pm.cli.main <command>`
+
+#### 与 poetry run pm 的对比
+
+| 特性 | `./bin/pm-local` | `poetry run pm` |
+|------|------------------|-----------------|
+| **Agent 兼容性** | ✅ 完美支持 | ⚠️ 需要额外配置 |
+| **环境检测** | ✅ 自动检测 | ❌ 需要 Poetry |
+| **错误处理** | ✅ 友好提示 | ❌ Poetry 原生错误 |
+| **调试支持** | ✅ 内置调试模式 | ❌ 无调试功能 |
+| **跨环境** | ✅ 支持多种环境 | ❌ 仅 Poetry 环境 |
+
+### Claude Code 集成
+
+#### 使用场景
+
+在 Claude Code 环境中，您可以通过自然语言描述个人效能需求，Claude 会自动转换为相应的 PersonalManager 命令。
+
+#### 典型交互流程
+
+**场景 1：项目管理**
+```
+用户：帮我查看所有项目的状态，并重点关注优先级高的项目
+
+Claude 执行：
+1. ./bin/pm-local projects overview
+2. 分析输出结果
+3. ./bin/pm-local project status "高优先级项目名称"
+4. 提供个性化建议
+```
+
+**场景 2：任务工作流**
+```
+用户：我想添加一些任务，然后看看今天应该重点做什么
+
+Claude 执行：
+1. ./bin/pm-local capture "用户描述的任务1"
+2. ./bin/pm-local capture "用户描述的任务2"  
+3. ./bin/pm-local clarify
+4. ./bin/pm-local today
+5. 解释推荐原因
+```
+
+**场景 3：深度工作会话**
+```
+用户：帮我安排一个专注的工作时段，我需要完成重要的写作任务
+
+Claude 执行：
+1. ./bin/pm-local deepwork create "重要写作任务"
+2. ./bin/pm-local deepwork start
+3. 提供专注工作建议
+4. （工作完成后）./bin/pm-local deepwork end
+```
+
+#### Claude Code 优势
+
+- **上下文理解**：Claude 能理解复杂的多步骤需求
+- **智能解析**：自动将自然语言转换为准确的命令
+- **结果分析**：对命令输出进行智能分析和解释
+- **错误处理**：自动处理命令执行中的异常情况
+- **工作流编排**：组合多个命令实现复杂工作流
+
+### Gemini CLI 集成
+
+#### 配置方式
+
+**基本配置**：
+```bash
+# 在项目根目录启动 Gemini CLI
+cd /path/to/personal-manager
+gemini chat
+
+# 或者配置工具调用
+gemini chat --tools ./bin/pm-local
+```
+
+**高级配置**：
+```yaml
+# ~/.config/gemini/tools.yaml（如果支持）
+tools:
+  - name: "personal_manager"  
+    command: "./bin/pm-local"
+    description: "PersonalManager 个人效能工具集"
+    working_directory: "/path/to/personal-manager"
+```
+
+#### 使用示例
+
+**任务管理对话**：
+```
+用户：帮我管理今天的任务
+
+Gemini：我来帮您管理今天的任务。让我先查看您当前的情况：
+
+./bin/pm-local today
+
+基于这些推荐，您想要：
+1. 开始执行某个特定任务？
+2. 添加新的任务？
+3. 重新组织任务优先级？
+
+用户：我想添加"准备明天的演示文稿"这个任务
+
+Gemini：好的，我为您添加这个任务：
+
+./bin/pm-local capture "准备明天的演示文稿"
+
+任务已添加！让我帮您进行理清分类：
+
+./bin/pm-local clarify
+
+现在让我重新查看更新后的今日推荐：
+
+./bin/pm-local today
+```
+
+**项目状态检查**：
+```
+用户：帮我了解项目进展情况
+
+Gemini：我来帮您查看项目状态：
+
+./bin/pm-local projects overview
+
+看起来您有几个项目在进行中。让我为您详细查看需要关注的项目：
+
+./bin/pm-local project status "项目A"
+./bin/pm-local project status "项目B"
+
+基于这些信息，我建议您优先关注...
+```
+
+#### Gemini CLI 特色
+
+- **对话式交互**：支持持续的对话式项目管理
+- **多轮任务规划**：在对话中逐步细化和完善任务
+- **实时状态跟踪**：动态跟踪项目和任务状态变化
+- **个性化建议**：基于历史对话提供个性化建议
+
+### 远程环境最佳实践
+
+#### 1. 环境准备
+
+**项目设置**：
+```bash
+# 确保在正确的项目目录
+cd /path/to/personal-manager
+
+# 验证启动器可用性
+./bin/pm-local --launcher-debug
+
+# 初始化配置（首次使用）
+./bin/pm-local setup
+```
+
+**权限配置**：
+```bash
+# 确保启动器可执行
+chmod +x ./bin/pm-local
+
+# 验证环境完整性
+./bin/pm-local privacy verify
+```
+
+#### 2. Agent 交互技巧
+
+**明确意图表达**：
+- ✅ "帮我查看今天的重点任务并开始第一个任务"
+- ❌ "看看任务"
+
+**提供上下文**：
+- ✅ "我正在做网站重构项目，帮我添加相关的测试任务"
+- ❌ "添加任务"
+
+**分步骤操作**：
+- ✅ "先查看项目状态，然后基于状态添加必要的任务"
+- ❌ "帮我处理所有项目相关的事情"
+
+#### 3. 常用工作流模式
+
+**每日启动流程**：
+```bash
+# 1. 系统状态检查
+./bin/pm-local status
+
+# 2. 项目概览
+./bin/pm-local projects overview
+
+# 3. 获取今日推荐
+./bin/pm-local today
+
+# 4. 开始重点工作
+./bin/pm-local deepwork start
+```
+
+**任务管理流程**：
+```bash  
+# 1. 快速捕获想法
+./bin/pm-local capture "临时想到的任务"
+
+# 2. 理清收件箱
+./bin/pm-local clarify
+
+# 3. 获取智能推荐
+./bin/pm-local recommend --count 5
+
+# 4. 解释推荐原因
+./bin/pm-local explain <任务ID>
+```
+
+**项目推进流程**：
+```bash
+# 1. 查看特定项目状态
+./bin/pm-local project status "项目名称"
+
+# 2. 添加项目相关任务
+./bin/pm-local capture "项目相关任务描述"
+
+# 3. 开始深度工作会话
+./bin/pm-local deepwork create "项目专注时段"
+
+# 4. 记录工作成果
+./bin/pm-local deepwork end
+```
+
+#### 4. 错误处理
+
+**常见错误及解决**：
+
+```bash
+# 权限错误
+chmod +x ./bin/pm-local
+
+# 环境检测失败
+./bin/pm-local --launcher-debug
+
+# 模块导入错误
+poetry install  # 或 pip install 相关依赖
+```
+
+**Agent 错误恢复**：
+- 如果 Agent 执行命令失败，可以要求显示详细错误信息
+- 使用 `./bin/pm-local --help` 查看可用命令
+- 使用 `./bin/pm-local status` 检查系统状态
+
+### 高级 Agent 功能
+
+#### 1. 智能工作流编排
+
+Agent 可以根据上下文自动编排复杂的工作流：
+
+```bash
+# 完整的项目管理工作流
+./bin/pm-local projects overview && \
+./bin/pm-local project status "关键项目" && \
+./bin/pm-local capture "项目紧急任务" && \
+./bin/pm-local today && \
+./bin/pm-local explain <推荐任务ID>
+```
+
+#### 2. 条件执行逻辑
+
+Agent 可以基于命令结果进行条件判断：
+
+```bash
+# 根据项目健康度决定后续操作
+if ./bin/pm-local project status "项目A" | grep -q "Good"; then
+    ./bin/pm-local capture "项目A优化任务"
+else
+    ./bin/pm-local capture "项目A风险缓解任务"
+fi
+```
+
+#### 3. 数据分析和报告
+
+Agent 可以分析 PersonalManager 的输出并生成洞察：
+
+```bash
+# 获取数据并分析
+./bin/pm-local projects overview > /tmp/projects.txt
+./bin/pm-local habits today > /tmp/habits.txt
+
+# Agent 分析数据并提供：
+# - 项目健康度趋势
+# - 习惯完成率统计  
+# - 个人效能改进建议
+```
+
+### 故障排查
+
+#### Agent 集成问题
+
+**问题**：Agent 无法执行 PersonalManager 命令
+**解决步骤**：
+1. 确认当前目录：`pwd`
+2. 检查启动器：`ls -la bin/pm-local`  
+3. 测试权限：`./bin/pm-local --help`
+4. 环境诊断：`./bin/pm-local --launcher-debug`
+
+**问题**：命令执行但无响应
+**解决步骤**：
+1. 检查系统状态：`./bin/pm-local status`
+2. 验证配置：`./bin/pm-local privacy verify`
+3. 重新初始化：`./bin/pm-local setup --reset`
+
+#### 性能优化
+
+**启动器性能**：
+```bash
+# 测量启动时间
+time ./bin/pm-local --version
+
+# 对比不同执行方式
+time poetry run pm --version
+time PYTHONPATH=src python3 -m pm.cli.main --version
+```
+
+**Agent 响应优化**：
+- 使用具体的命令而不是通用查询
+- 避免同时执行多个重量级操作
+- 定期清理过期数据：`./bin/pm-local privacy cleanup`
+
+### 总结
+
+通过 Agent 和远程调用功能，PersonalManager 实现了真正的"自然语言驱动"个人效能管理。无论是使用 Claude Code 的智能上下文理解，还是 Gemini CLI 的对话式交互，都能让您专注于描述需求，而让 AI Agent 处理具体的技术执行细节。
+
+这种设计哲学让个人效能管理变得更加直观和高效，真正实现了"心如止水"的理想状态——您只需表达意图，系统会智能地处理其余工作。
+
 ## 配置说明
 
 ### 语言字段配置

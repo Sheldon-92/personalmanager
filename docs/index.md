@@ -27,7 +27,11 @@ Welcome to the official documentation for the `PersonalManager` project - a pers
 *   [User Guide](user_guide.md): A comprehensive guide for end-users.
 *   [Tool Registration Guide](tool_registration.md): A guide for registering the `PersonalManager` tools with an AI agent.
 
-### 5. Other Documents
+### 5. Agent Integration
+
+*   [Local Agent Wiring Guide](agents/local_agent_wiring.md): Complete implementation guide for project-level Agent integration and command mapping, including Claude Code and Gemini CLI integration.
+
+### 6. Other Documents
 
 *   [IDEAS_BACKLOG.md](IDEAS_BACKLOG.md): A backlog of ideas and feature requests.
 *   [PROJECT_STATUS.md](PROJECT_STATUS.md): The current status of the project.
