@@ -41,6 +41,7 @@ from pm.cli.commands.deep_work import deep_work_app
 from pm.cli.commands.review import review_app
 from pm.cli.commands.obsidian import obsidian_app
 from pm.cli.commands.doctor import doctor_app
+from pm.cli.commands.ai_executor import ai_executor_app
 
 app = typer.Typer(
     name="pm",
@@ -431,6 +432,9 @@ app.add_typer(obsidian_app, name="obsidian")
 
 # 系统诊断命令组 - Phase 2新功能，环境自检与诊断
 app.add_typer(doctor_app, name="doctor")
+
+# AI执行器命令组 - Sprint 2新功能，SafetyUX智能执行
+app.add_typer(ai_executor_app, name="ai")
 
 @report_app.command("update")
 def report_update(
