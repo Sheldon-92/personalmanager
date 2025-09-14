@@ -10,22 +10,33 @@
 #   ./pm-wrapper.sh capture "New task idea"
 #
 
-set -e  # Exit on error
+set -euo pipefail  # Exit on error, undefined variables, and pipe failures
 
 # Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Security: Command whitelist
+readonly ALLOWED_COMMANDS=("today" "projects" "capture" "explain" "clarify" "tasks" "inbox" "next" "help" "--help" "--version" "ai")
+readonly AI_SUBCOMMANDS=("route" "query" "suggest" "analyze" "plan")
+
+# Security: Parameter constraints
+readonly MAX_ARG_LENGTH=1000
+readonly SAFE_CHAR_PATTERN='^[a-zA-Z0-9._/-][a-zA-Z0-9._/ -]*$'
 
 # Change to project root directory
 cd "$PROJECT_ROOT"
 
 # Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly CYAN='\033[0;36m'
+readonly NC='\033[0m' # No Color
+
+# Security logging
+readonly SECURITY_LOG="${PROJECT_ROOT}/.gemini/security.log"
 
 # Function to print colored messages
 print_info() {
@@ -38,6 +49,7 @@ print_warn() {
 
 print_error() {
     echo -e "${RED}[GEMINI-WRAPPER]${NC} $1"
+    log_security_event "ERROR" "$1"
 }
 
 print_success() {
@@ -48,6 +60,97 @@ print_header() {
     echo -e "${CYAN}╔══════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║           PersonalManager via Gemini        ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════╝${NC}"
+}
+
+# Security: Log security events
+log_security_event() {
+    local level="$1"
+    local message="$2"
+    local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+
+    # Ensure log directory exists
+    mkdir -p "$(dirname "$SECURITY_LOG")"
+
+    # Log security events with proper formatting
+    printf '[%s] %s: %s\n' "$timestamp" "$level" "$message" >> "$SECURITY_LOG" 2>/dev/null || true
+}
+
+# Security: Validate command against whitelist
+validate_command() {
+    local cmd="$1"
+    local is_valid=false
+
+    # Check against allowed commands
+    for allowed in "${ALLOWED_COMMANDS[@]}"; do
+        if [[ "$cmd" == "$allowed" ]]; then
+            is_valid=true
+            break
+        fi
+    done
+
+    if [[ "$is_valid" != "true" ]]; then
+        print_error "Security: Command '$cmd' not in whitelist"
+        log_security_event "BLOCKED" "Invalid command attempted: $cmd"
+        return 1
+    fi
+
+    return 0
+}
+
+# Security: Validate AI subcommand
+validate_ai_subcommand() {
+    local subcmd="$1"
+    local is_valid=false
+
+    # Check against allowed AI subcommands
+    for allowed in "${AI_SUBCOMMANDS[@]}"; do
+        if [[ "$subcmd" == "$allowed" ]]; then
+            is_valid=true
+            break
+        fi
+    done
+
+    if [[ "$is_valid" != "true" ]]; then
+        print_error "Security: AI subcommand '$subcmd' not allowed"
+        log_security_event "BLOCKED" "Invalid AI subcommand attempted: $subcmd"
+        return 1
+    fi
+
+    return 0
+}
+
+# Security: Sanitize and validate parameters
+sanitize_parameters() {
+    local -a sanitized_params=()
+
+    for param in "$@"; do
+        # Check parameter length
+        if [[ ${#param} -gt $MAX_ARG_LENGTH ]]; then
+            print_error "Security: Parameter too long (max $MAX_ARG_LENGTH chars)"
+            log_security_event "BLOCKED" "Parameter length violation: ${#param} chars"
+            return 1
+        fi
+
+        # Check for dangerous patterns
+        if [[ "$param" =~ ^/ ]] || [[ "$param" =~ \.\. ]] || [[ "$param" =~ [\|\&\;\`\$\(\)\<\>] ]] || [[ "$param" =~ [*?\[\]] ]]; then
+            print_error "Security: Dangerous pattern detected in parameter"
+            log_security_event "BLOCKED" "Dangerous pattern in parameter: $param"
+            return 1
+        fi
+
+        # Basic character validation (allow common safe characters)
+        if [[ ! "$param" =~ $SAFE_CHAR_PATTERN ]]; then
+            print_error "Security: Invalid characters in parameter"
+            log_security_event "BLOCKED" "Invalid characters in parameter: $param"
+            return 1
+        fi
+
+        sanitized_params+=("$param")
+    done
+
+    # Output sanitized parameters
+    printf '%s\n' "${sanitized_params[@]}"
+    return 0
 }
 
 # Function to show usage help
@@ -61,12 +164,12 @@ show_usage() {
     echo "  projects [action]  Project management (overview, status, etc.)"
     echo "  capture [text]     Capture new tasks or ideas to inbox"
     echo "  explain           Explain recommendation logic and insights"
-    echo "  help              Show PersonalManager help information"
-    echo "  doctor            Run system diagnostics"
-    echo "  habits            Habit tracking and management"
-    echo "  review            Review and reflection tools"
     echo "  clarify           GTD clarification process"
-    echo "  deepwork          Deep work session management"
+    echo "  tasks             Task management operations"
+    echo "  inbox             Inbox management"
+    echo "  next              Next actions processing"
+    echo "  help              Show PersonalManager help information"
+    echo "  ai [subcmd]       AI-powered features (route, query, suggest, analyze, plan)"
     echo
     echo "Examples:"
     echo "  $0 today"
@@ -116,10 +219,16 @@ execute_pm_command() {
 
 # Main execution logic
 main() {
+    # Security: Log execution attempt
+    log_security_event "INFO" "Wrapper execution started with args: $*"
+
     # Handle no arguments or help flags
     if [[ $# -eq 0 || "$1" == "-h" || "$1" == "--help" || "$1" == "help" ]]; then
         if [[ "$1" == "help" ]]; then
-            # If user specifically asked for "help", also show PersonalManager help
+            # Security: Validate help command
+            if ! validate_command "help"; then
+                exit 1
+            fi
             check_pm_local
             execute_pm_command "help"
         else
@@ -127,67 +236,113 @@ main() {
         fi
         exit 0
     fi
-    
+
+    # Security: Validate first command
+    if ! validate_command "$1"; then
+        exit 1
+    fi
+
+    # Security: Special handling for AI commands
+    if [[ "$1" == "ai" ]]; then
+        if [[ $# -lt 2 ]]; then
+            print_error "Security: AI command requires subcommand"
+            log_security_event "BLOCKED" "AI command without subcommand"
+            exit 1
+        fi
+        if ! validate_ai_subcommand "$2"; then
+            exit 1
+        fi
+    fi
+
+    # Security: Sanitize all parameters
+    local -a sanitized_args
+    local sanitized_output
+    if ! sanitized_output="$(sanitize_parameters "$@")"; then
+        exit 1
+    fi
+
+    # Convert output to array (compatible with older bash)
+    IFS=$'\n' read -ra sanitized_args <<< "$sanitized_output"
+
     # Print header for all commands
     print_header
     echo
-    
+
     # Check if pm-local exists and is executable
     check_pm_local
     
-    # Map some common Gemini CLI patterns to PersonalManager commands
-    case "$1" in
-        "pm-today"|"today")
+    # Security: Use sanitized arguments for command routing
+    case "${sanitized_args[0]}" in
+        "today")
             execute_pm_command "today"
             ;;
-        "pm-projects"|"projects")
-            shift  # Remove first argument
-            execute_pm_command "projects" "$@"
+        "projects")
+            # Pass remaining sanitized arguments
+            if [[ ${#sanitized_args[@]} -gt 1 ]]; then
+                execute_pm_command "projects" "${sanitized_args[@]:1}"
+            else
+                execute_pm_command "projects"
+            fi
             ;;
-        "pm-capture"|"capture")
-            shift  # Remove first argument
-            if [[ $# -eq 0 ]]; then
+        "capture")
+            if [[ ${#sanitized_args[@]} -eq 1 ]]; then
                 print_warn "No capture text provided. Starting interactive capture mode..."
                 execute_pm_command "capture"
             else
-                execute_pm_command "capture" "$@"
+                execute_pm_command "capture" "${sanitized_args[@]:1}"
             fi
             ;;
-        "pm-explain"|"explain")
+        "explain")
             execute_pm_command "explain"
             ;;
-        "pm-help"|"help")
-            execute_pm_command "help"
-            ;;
-        "pm-doctor"|"doctor")
-            shift
-            if [[ $# -eq 0 ]]; then
-                execute_pm_command "doctor" "main"
-            else
-                execute_pm_command "doctor" "$@"
-            fi
-            ;;
-        "pm-habits"|"habits")
-            shift
-            execute_pm_command "habits" "$@"
-            ;;
-        "pm-review"|"review")
-            shift
-            execute_pm_command "review" "$@"
-            ;;
-        "pm-clarify"|"clarify")
+        "clarify")
             execute_pm_command "clarify"
             ;;
-        "pm-deepwork"|"deepwork")
-            shift
-            execute_pm_command "deepwork" "$@"
+        "tasks")
+            if [[ ${#sanitized_args[@]} -gt 1 ]]; then
+                execute_pm_command "tasks" "${sanitized_args[@]:1}"
+            else
+                execute_pm_command "tasks"
+            fi
+            ;;
+        "inbox")
+            if [[ ${#sanitized_args[@]} -gt 1 ]]; then
+                execute_pm_command "inbox" "${sanitized_args[@]:1}"
+            else
+                execute_pm_command "inbox"
+            fi
+            ;;
+        "next")
+            if [[ ${#sanitized_args[@]} -gt 1 ]]; then
+                execute_pm_command "next" "${sanitized_args[@]:1}"
+            else
+                execute_pm_command "next"
+            fi
+            ;;
+        "help"|"--help")
+            execute_pm_command "help"
+            ;;
+        "--version")
+            execute_pm_command "--version"
+            ;;
+        "ai")
+            # AI command with validated subcommand
+            if [[ ${#sanitized_args[@]} -gt 2 ]]; then
+                execute_pm_command "ai" "${sanitized_args[1]}" "${sanitized_args[@]:2}"
+            else
+                execute_pm_command "ai" "${sanitized_args[1]}"
+            fi
             ;;
         *)
-            # Pass through any unrecognized commands directly to pm-local
-            print_info "Passing through unrecognized command: $*"
-            execute_pm_command "$@"
+            # Security: No fallback - all commands must be explicitly whitelisted
+            print_error "Security: Command '${sanitized_args[0]}' not allowed"
+            log_security_event "BLOCKED" "Attempted execution of non-whitelisted command: ${sanitized_args[0]}"
+            exit 1
             ;;
     esac
+
+    # Security: Log successful execution
+    log_security_event "INFO" "Command executed successfully: ${sanitized_args[*]}"
 }
 
 # Error handling
