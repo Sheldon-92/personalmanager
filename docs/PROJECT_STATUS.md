@@ -1,12 +1,12 @@
 # PersonalManager 项目状态
 
-> **Document Version**: v1.2
+> **Document Version**: v1.3
 > **Last Updated**: 2025-09-14
-> **Status**: Phase 1 完成，准备 Phase 2 - User Experience & Production Readiness
+> **Status**: Phase 1 完成，v0.2.0-alpha 已发布，正式进入 Phase 2 准备阶段
 
 ## 当前阶段概览
 
-PersonalManager 项目已完成 **Phase 1: AI Tool Integration and Stabilization** 阶段，成功建立了稳固的基础架构和完整的 AI 工具集成能力。当前正在准备进入 **Phase 2: User Experience & Production Readiness** 阶段，专注于用户体验优化和生产就绪性增强。
+PersonalManager 项目已成功完成 **Phase 1: AI Tool Integration and Stabilization** 阶段，并发布了 v0.2.0-alpha 版本。该版本建立了稳固的基础架构和完整的 AI 工具集成能力，实现了"项目级就地可用"的目标。当前已正式进入 **Phase 2: User Experience & Production Readiness** 准备阶段，专注于用户体验优化和生产就绪性增强。
 
 ### 已完成的里程碑
 
@@ -62,13 +62,21 @@ PersonalManager 项目已完成 **Phase 1: AI Tool Integration and Stabilization
 
 **Phase 1 总结**: AI工具集成和稳定化阶段圆满完成，项目已具备完整的Agent接入能力。
 
+#### ✅ v0.2.0-alpha 发布成果
+- [x] **本地就地可用**: bin/pm-local 启动器支持Poetry/非Poetry环境自动切换
+- [x] **AI协议统一**: 标准化JSON响应格式，支持Claude和Gemini双AI服务
+- [x] **安全白名单**: 11个预批准命令，多层安全防护机制
+- [x] **35个测试用例**: 100%通过率，包含启动器和安全向量完整测试
+- [x] **文档体系完善**: ADR-0005、集成报告、AI协议兼容性说明
+- [x] **Agent就绪**: Claude和Gemini CLI完整集成，项目级部署策略
+
 ### 下一步计划
 
 #### 📋 Phase 2 准备任务
-- **v0.2.0-alpha 发布**：完成文档发布准备和版本标记
-- **用户体验优化**：Setup 向导优化和错误处理改进
-- **生产就绪性**：性能优化和监控机制建立
-- **社区准备**：开源发布准备和贡献指南完善
+- [x] **v0.2.0-alpha 发布**：已完成文档发布准备和版本标记
+- [ ] **用户体验优化**：Setup 向导优化和错误处理改进
+- [ ] **生产就绪性**：性能优化和监控机制建立
+- [ ] **社区准备**：开源发布准备和贡献指南完善
 
 #### 🎯 Phase 2 主要目标
 - 端到端用户体验优化

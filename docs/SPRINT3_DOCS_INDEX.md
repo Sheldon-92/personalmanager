@@ -5,10 +5,11 @@
 
 ## 技术规范
 - [AI协议兼容性说明](../AI_PROTOCOL_COMPATIBILITY.md)
+- [JSON输出格式规范](technical/JSON_OUTPUT_FORMAT.md)
 - [Sprint 3最终验证报告](../SPRINT3_FINAL_VERIFICATION.md)
 
 ## 集成配置
-- [Gemini CLI命令定义](.gemini/commands/pm/)
+- [Gemini CLI命令定义](../.gemini/commands/pm/)
   - today.toml - 今日推荐
   - projects-overview.toml - 项目概览
   - capture.toml - 任务捕获
