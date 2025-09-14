@@ -43,6 +43,15 @@ Welcome to the official documentation for the `PersonalManager` project - a pers
 
 *   [IDEAS_BACKLOG.md](IDEAS_BACKLOG.md): A backlog of ideas and feature requests.
 *   [PROJECT_STATUS.md](PROJECT_STATUS.md): The current status of the project.
+
+### 6. Prompts
+
+*   [PO Persona](prompts/po_persona.md): 产品负责人角色与核心职责定义。
+*   [PO Workflow](prompts/po_workflow.md): 产品负责人标准化工作流程手册。
+
+### 7. Agent Integration
+
+*   [Local Agent Wiring](agents/local_agent_wiring.md): 项目级 AI Agent 命令映射与调用指南。
 *   Archived: historical docs (see `docs/archive/`)
 
 ---
