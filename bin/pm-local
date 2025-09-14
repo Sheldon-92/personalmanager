@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+#
+# PersonalManager Local Launcher
+# Project-level executable script for PersonalManager
+#
+# This script intelligently detects the environment and chooses the best launch strategy:
+# 1. If Poetry is available and pyproject.toml exists: uses 'poetry run pm'  
+# 2. Falls back to direct Python execution: 'PYTHONPATH=src python3 -m pm.cli.main'
+#
+# Compatible with bash and zsh shells
+# Supports all standard CLI arguments (--version, --help, etc.)
+#
+
+set -e  # Exit on error
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Change to project root directory
+cd "$PROJECT_ROOT"
+
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to print colored messages
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Function to check if Poetry environment is available
+check_poetry() {
+    if command_exists poetry && [ -f "pyproject.toml" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to check if Python module can be imported
+check_python_module() {
+    PYTHONPATH="$PROJECT_ROOT/src" python3 -c "import pm.cli.main" >/dev/null 2>&1
+}
+
+# Function to launch with Poetry
+launch_with_poetry() {
+    print_info "Using Poetry environment (poetry run pm)"
+    exec poetry run pm "$@"
+}
+
+# Function to launch with direct Python
+launch_with_python() {
+    print_info "Using direct Python execution (PYTHONPATH=src python3 -m pm.cli.main)"
+    
+    # Check if the module can be imported
+    if ! check_python_module; then
+        print_error "Cannot import pm.cli.main module from $PROJECT_ROOT/src"
+        print_error "Please ensure:"
+        print_error "  1. Python dependencies are installed"
+        print_error "  2. The project structure is correct"
+        print_error "  3. You have a working Python 3.9+ environment"
+        exit 1
+    fi
+    
+    export PYTHONPATH="$PROJECT_ROOT/src"
+    exec python3 -m pm.cli.main "$@"
+}
+
+# Function to show environment info
+show_environment_info() {
+    echo "PersonalManager Local Launcher - Environment Information"
+    echo "======================================================="
+    echo "Project Root: $PROJECT_ROOT"
+    echo "Python Version: $(python3 --version 2>/dev/null || echo 'Not found')"
+    echo "Poetry Available: $(command_exists poetry && echo 'Yes' || echo 'No')"
+    echo "pyproject.toml: $([ -f 'pyproject.toml' ] && echo 'Found' || echo 'Not found')"
+    echo "Source Directory: $([ -d 'src/pm' ] && echo 'Found' || echo 'Not found')"
+}
+
+# Main execution logic
+main() {
+    # Handle special debug flag
+    if [[ "$1" == "--launcher-debug" ]]; then
+        show_environment_info
+        exit 0
+    fi
+    
+    # Strategy 1: Try Poetry first (if available and pyproject.toml exists)
+    if check_poetry; then
+        launch_with_poetry "$@"
+    else
+        # Strategy 2: Fall back to direct Python execution
+        print_warn "Poetry not available or pyproject.toml not found, falling back to direct Python execution"
+        
+        # Verify Python 3 is available
+        if ! command_exists python3; then
+            print_error "Python 3 is not available. Please install Python 3.9 or later."
+            exit 1
+        fi
+        
+        # Verify source directory exists
+        if [ ! -d "$PROJECT_ROOT/src/pm" ]; then
+            print_error "Source directory not found at $PROJECT_ROOT/src/pm"
+            print_error "Please ensure you're running this script from a valid PersonalManager project directory."
+            exit 1
+        fi
+        
+        launch_with_python "$@"
+    fi
+}
+
+# Handle common help patterns
+case "${1:-}" in
+    -h|--help|help)
+        # Pass through to the actual application
+        main "$@"
+        ;;
+    -v|--version|version)
+        # Pass through to the actual application  
+        main "$@"
+        ;;
+    --launcher-debug)
+        # Special debug mode for the launcher itself
+        main "$@"
+        ;;
+    *)
+        # Normal execution
+        main "$@"
+        ;;
+esac
