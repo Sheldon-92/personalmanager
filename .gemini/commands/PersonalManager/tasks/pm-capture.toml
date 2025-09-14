@@ -1,0 +1,28 @@
+description = "Capture new tasks or ideas into PersonalManager inbox"
+prompt = """
+You are executing PersonalManager's 'capture' command which allows quick capture of tasks, ideas, or notes into the GTD inbox system.
+
+COMMAND TO EXECUTE: ./bin/pm-local capture
+
+Since you cannot directly execute shell commands, please:
+
+1. Explain the GTD capture process and its importance
+2. Describe what information PersonalManager typically collects:
+   - Task title/description
+   - Context tags (work, personal, etc.)
+   - Priority indicators
+   - Due dates if applicable
+   - Energy level requirements
+
+3. Guide the user through a manual capture process:
+   - Ask for the task or idea they want to capture
+   - Suggest appropriate categorization
+   - Recommend context tags
+   - Provide formatting guidelines for future reference
+
+4. Look for existing task storage files in src/pm/core/ to understand the data structure
+
+5. Suggest they save their input in a format compatible with PersonalManager's data model
+
+NOTE: This is a workaround since Gemini CLI lacks shell execution tools. For actual task capture, users should run './bin/pm-local capture' directly in the terminal.
+"""

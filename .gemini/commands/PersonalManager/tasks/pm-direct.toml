@@ -1,0 +1,28 @@
+description = "Direct PersonalManager command execution using wrapper script"
+prompt = """
+You are executing PersonalManager commands through the Gemini CLI wrapper script.
+
+Since Gemini CLI cannot execute shell commands directly, please inform the user:
+
+1. **For Direct Execution**: Use the wrapper script located at:
+   `.gemini/pm-wrapper.sh [command] [args]`
+
+2. **Available Commands Through Wrapper**:
+   - `.gemini/pm-wrapper.sh today` - Get daily recommendations
+   - `.gemini/pm-wrapper.sh projects overview` - Project status
+   - `.gemini/pm-wrapper.sh capture "task text"` - Capture tasks
+   - `.gemini/pm-wrapper.sh explain` - System explanations
+   - `.gemini/pm-wrapper.sh help` - Full help information
+
+3. **Alternative**: Run PersonalManager directly:
+   `./bin/pm-local [command] [args]`
+
+4. **Integration Note**: The wrapper provides enhanced output formatting and error handling specifically designed for Gemini CLI integration.
+
+5. **Troubleshooting**: If the wrapper doesn't work:
+   - Ensure it's executable: `chmod +x .gemini/pm-wrapper.sh`
+   - Check PersonalManager installation: `./bin/pm-local --version`
+   - Run diagnostics: `./bin/pm-local doctor`
+
+Please copy and run one of the commands above in your terminal for actual PersonalManager functionality.
+"""
