@@ -44,7 +44,8 @@ from pm.cli.commands.doctor import doctor_app
 from pm.cli.commands.test import test_app
 from pm.cli.commands.workspace import workspace_app
 from pm.cli.commands.agent_tools import agent_app
-from pm.cli.commands.ai_router import ai_app
+from pm.cli.commands.ai_router import ai_app as ai_router_app
+from pm.cli.commands.ai_executor import ai_app as ai_executor_app
 
 app = typer.Typer(
     name="pm",
@@ -464,8 +465,8 @@ app.add_typer(workspace_app, name="workspace")
 # AI Agent 工具命令组 - Sprint 1新功能，实验性
 app.add_typer(agent_app, name="agent")
 
-# AI 路由命令组 - Sprint 2新功能，自然语言意图路由
-app.add_typer(ai_app, name="ai")
+# AI命令组 - Sprint 2新功能，自然语言意图路由和执行
+app.add_typer(ai_router_app, name="ai")
 
 @report_app.command("update")
 def report_update(

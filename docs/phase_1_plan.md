@@ -9,6 +9,7 @@
 | **1.1** | 更新核心文档 | **PO (我)** | **最高** | - 重写 `README.md`，准确反映所有已实现功能。<br>- 创建 `PROJECT_STATUS.md` 的编写指南和模板。 |
 | **1.2** | 完善`setup`安装向导 | **Dev (`claude`)** | **最高** | - 扩展 `setup.py`，使其能交互式地配置`config.py`中所有对用户有意义的选项（如精力管理、书籍理论模块等）。 |
 | **1.3** | 澄清并处理`SQLAlchemy`依赖 | **Dev (`claude`)** | **高** | - 调查`sqlalchemy`和`alembic`在项目中的实际用途。<br>- 如果确认无用，将其从`pyproject.toml`中安全移除。 |
+| **1.4** | 项目级 Agent 接入（Cloud Code/Gemini COI） | **PO/Dev** | **最高** | - 提供项目内可执行入口 `bin/pm-local`（poetry优先，PYTHONPATH回退）。<br>- 为 Claude/Gemini 增加本地命令映射与权限（.claude/.gemini）。<br>- 输出《agents/local_agent_wiring.md》操作指引与AC。 |
 
 **后续阶段规划 (初步设想)**:
 

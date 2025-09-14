@@ -1,9 +1,7 @@
-"""
-PersonalManager Routing Module
-
-This module handles natural language intent routing and command mapping.
-"""
+"""路由系统 - 实现AI意图路由到具体命令执行"""
 
 from .intent_matcher import IntentMatcher
+from .command_executor import CommandExecutor, ExecutionResult
+from .ai_router import AIRouter, RouteResult
 
-__all__ = ['IntentMatcher']
+__all__ = ['IntentMatcher', "CommandExecutor", "ExecutionResult", "AIRouter", "RouteResult"]

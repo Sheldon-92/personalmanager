@@ -1,7 +1,6 @@
-"""Standardized error codes and messages for PersonalManager.
+"""PersonalManager 异常处理模块
 
-Implements P2-04: Error and logging standardization
-with unified error codes, messages, and suggestions.
+同时支持标准化错误代码和执行异常处理。
 """
 
 from enum import Enum
@@ -43,8 +42,17 @@ class ErrorCode(Enum):
         self.suggestion = suggestion
 
 
+class PMError(Exception):
+    """PersonalManager 基础异常类"""
+    
+    def __init__(self, message: str, error_code: Optional[str] = None):
+        self.message = message
+        self.error_code = error_code
+        super().__init__(self.message)
+
+
 @dataclass
-class PMError:
+class PMStandardError:
     """PersonalManager标准错误类"""
     error_code: ErrorCode
     context: Optional[str] = None
@@ -83,33 +91,74 @@ class PMError:
         return result
 
 
+class PMExecutionError(PMError):
+    """命令执行异常"""
+    
+    def __init__(self, message: str, exit_code: int = 1, command: Optional[str] = None):
+        super().__init__(message, "EXECUTION_ERROR")
+        self.exit_code = exit_code
+        self.command = command
+
+
+class PMSecurityError(PMError):
+    """安全验证异常"""
+    
+    def __init__(self, message: str, dangerous_command: Optional[str] = None):
+        super().__init__(message, "SECURITY_ERROR")
+        self.dangerous_command = dangerous_command
+
+
+class PMRoutingError(PMError):
+    """路由解析异常"""
+    
+    def __init__(self, message: str, utterance: Optional[str] = None):
+        super().__init__(message, "ROUTING_ERROR")
+        self.utterance = utterance
+
+
+class PMConfigurationError(PMError):
+    """配置异常"""
+    
+    def __init__(self, message: str, config_key: Optional[str] = None):
+        super().__init__(message, "CONFIG_ERROR")
+        self.config_key = config_key
+
+
+class PMIntegrationError(PMError):
+    """第三方集成异常"""
+    
+    def __init__(self, message: str, service: Optional[str] = None):
+        super().__init__(message, "INTEGRATION_ERROR")
+        self.service = service
+
+
 def raise_pm_error(error_code: ErrorCode, context: Optional[str] = None, 
                    details: Optional[Dict[str, Any]] = None) -> None:
     """抛出PersonalManager标准错误"""
-    error = PMError(error_code, context, details)
+    error = PMStandardError(error_code, context, details)
     raise Exception(error.get_full_message())
 
 
 def format_error_message(error_code: ErrorCode, context: Optional[str] = None) -> str:
     """格式化错误消息（不抛出异常）"""
-    error = PMError(error_code, context)
+    error = PMStandardError(error_code, context)
     return error.get_full_message()
 
 
-def check_system_initialized() -> Optional[PMError]:
+def check_system_initialized() -> Optional[PMStandardError]:
     """检查系统是否已初始化"""
     try:
         from pm.core.config import PMConfig
         config = PMConfig()
         if not config.is_initialized():
-            return PMError(ErrorCode.E1001)
+            return PMStandardError(ErrorCode.E1001)
     except Exception:
-        return PMError(ErrorCode.E1003, "配置加载失败")
+        return PMStandardError(ErrorCode.E1003, "配置加载失败")
     
     return None
 
 
-def check_data_directory_permissions() -> Optional[PMError]:
+def check_data_directory_permissions() -> Optional[PMStandardError]:
     """检查数据目录权限"""
     try:
         from pm.core.config import PMConfig
@@ -119,7 +168,7 @@ def check_data_directory_permissions() -> Optional[PMError]:
         data_dir = config.data_dir
         
         if not data_dir.exists():
-            return PMError(ErrorCode.E1005, f"数据目录不存在: {data_dir}")
+            return PMStandardError(ErrorCode.E1005, f"数据目录不存在: {data_dir}")
         
         # 检查写权限
         test_file = data_dir / ".write_test"
@@ -127,15 +176,15 @@ def check_data_directory_permissions() -> Optional[PMError]:
             test_file.write_text("test")
             test_file.unlink()
         except Exception:
-            return PMError(ErrorCode.E1002, f"数据目录: {data_dir}")
+            return PMStandardError(ErrorCode.E1002, f"数据目录: {data_dir}")
             
     except Exception as e:
-        return PMError(ErrorCode.E1004, f"权限检查失败: {str(e)}")
+        return PMStandardError(ErrorCode.E1004, f"权限检查失败: {str(e)}")
     
     return None
 
 
-def check_projects_root() -> Optional[PMError]:
+def check_projects_root() -> Optional[PMStandardError]:
     """检查项目根目录"""
     try:
         from pm.core.config import PMConfig
@@ -143,14 +192,14 @@ def check_projects_root() -> Optional[PMError]:
         
         config = PMConfig()
         if not hasattr(config, 'projects_root') or not config.projects_root:
-            return PMError(ErrorCode.E2001, "项目根目录未配置")
+            return PMStandardError(ErrorCode.E2001, "项目根目录未配置")
             
         projects_root = Path(config.projects_root)
         if not projects_root.exists():
-            return PMError(ErrorCode.E2001, f"项目根目录不存在: {projects_root}")
+            return PMStandardError(ErrorCode.E2001, f"项目根目录不存在: {projects_root}")
             
     except Exception as e:
-        return PMError(ErrorCode.E2004, f"项目根目录检查失败: {str(e)}")
+        return PMStandardError(ErrorCode.E2004, f"项目根目录检查失败: {str(e)}")
     
     return None
 

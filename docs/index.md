@@ -53,7 +53,6 @@ Welcome to the official documentation for the `PersonalManager` project - a pers
 
 *   [Local Agent Wiring](agents/local_agent_wiring.md): 项目级 AI Agent 命令映射与调用指南。
 *   Archived: historical docs (see `docs/archive/`)
-
 ---
 **Document Version**: v1.3
 **Last Updated**: 2025-09-13
