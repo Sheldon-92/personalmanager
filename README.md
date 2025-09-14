@@ -123,3 +123,50 @@ poetry run pm setup
 查看详细的版本更新历史和功能变更，请参阅 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
+
+## AI 工作空间模式（规划中）
+
+> 目标：将 BMAD 的“配置驱动 + 角色/方法持久化”能力引入 PersonalManager，形成项目级别的 AI 工作空间，让 Agent 在进入工作目录后即可具备 PersonalManager 专家身份、读取偏好记忆，并将自然语言映射为本地 `pm` 命令执行。
+
+### 工作空间产物（将由 CLI 脚手架生成）
+
+- `.personalmanager/workspace-config.yaml`：工作空间与启动仪式配置（language/timezone/startup/隐私策略）。
+- `.personalmanager/ai-agent-definition.md`：专家身份、服务原则、错误码契约、交互规范。
+- `.personalmanager/interaction-patterns.json`：自然语言意图→`pm` 命令映射与槽位、置信度、确认文案（多语言）。
+- `.claude/project-instructions.md` / `~/.gemini/config.json` 片段：从上述配置编译的项目级 Agent 指令。
+
+### 规划中的 CLI 命令（文档先行，代码未实现）
+
+- `pm workspace init [--agent=claude|gemini] [--force]`
+  - 在当前目录脚手架上述 3 个核心文件；幂等，不覆写（除非 `--force`）。
+- `pm agent prompt --print|--write`
+  - 从配置编译出精简项目级系统提示，`--write` 时输出到 `.claude/project-instructions.md` 及 Gemini 片段。
+- `pm agent status`
+  - 校验三件套是否齐备、语法/字段/大小上限、平台片段可用性。
+- `pm ai route "自然语言" --json` / `pm ai execute "自然语言" [--auto-confirm]`
+  - 本地意图路由到 `pm` 命令（见 `docs/specs/interaction_patterns.md` 协议）。
+
+> 以上命令为规划中接口，便于 Agent 团队先期开发联调；不影响当前版本功能。
+
+### 使用流程（规划）
+
+```bash
+# 1) 初始化系统（现有）
+poetry run pm setup --guided
+
+# 2) 初始化 AI 工作空间（规划）
+poetry run pm workspace init
+poetry run pm agent prompt --write
+
+# 3) 在 Claude/Gemini 打开该目录，会话开场即读取项目级指令
+
+# 4) 自然语言 → 执行（规划）
+poetry run pm ai route "今天做什么" --json
+poetry run pm ai execute "记录：改进界面"
+```
+
+更多设计细节见：
+- `docs/specs/workspace_config.md`
+- `docs/specs/prompt_compiler.md`
+- `docs/specs/interaction_patterns.md`
+- `docs/specs/memory_model.md`

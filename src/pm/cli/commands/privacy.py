@@ -297,6 +297,27 @@ def clear_all_data() -> None:
 def verify_data_integrity() -> None:
     """验证数据完整性"""
     
+    # 使用标准化错误检查
+    from pm.core.errors import check_system_initialized, check_data_directory_permissions
+    
+    error = check_system_initialized()
+    if error:
+        console.print(Panel(
+            error.get_full_message(),
+            title="❌ 系统错误",
+            border_style="red"
+        ))
+        raise typer.Exit(1)
+        
+    error = check_data_directory_permissions()
+    if error:
+        console.print(Panel(
+            error.get_full_message(),
+            title="❌ 权限错误",
+            border_style="red"
+        ))
+        raise typer.Exit(1)
+    
     console.print("[blue]🔍 正在验证数据完整性...")
     
     success, message, data = verify_data_integrity_tool()
@@ -307,7 +328,7 @@ def verify_data_integrity() -> None:
             title="验证失败",
             border_style="red"
         ))
-        return
+        raise typer.Exit(1)
         
     if not data:
         console.print(Panel(

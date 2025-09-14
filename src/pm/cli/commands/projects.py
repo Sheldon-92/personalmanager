@@ -34,6 +34,28 @@ def show_projects_overview(sort_by: str = "health") -> None:
     - 支持不超过50个项目的显示
     """
     
+    # 使用标准化错误检查
+    from pm.core.errors import check_system_initialized, check_projects_root
+    
+    # 检查系统状态
+    error = check_system_initialized()
+    if error:
+        console.print(Panel(
+            error.get_full_message(),
+            title="❌ 系统错误",
+            border_style="red"
+        ))
+        raise typer.Exit(1)
+        
+    error = check_projects_root()
+    if error:
+        console.print(Panel(
+            error.get_full_message(),
+            title="❌ 配置错误", 
+            border_style="red"
+        ))
+        raise typer.Exit(1)
+    
     config = PMConfig()
     
     # 调用AI可调用工具函数
@@ -49,7 +71,7 @@ def show_projects_overview(sort_by: str = "health") -> None:
             title="❌ 错误",
             border_style="red"
         ))
-        return
+        raise typer.Exit(1)
     
     # 显示概览标题
     projects = overview_info["projects"]

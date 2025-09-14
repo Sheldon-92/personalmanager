@@ -1,0 +1,63 @@
+{
+  "_comment": "Claude Code 配置模板 - 请复制到 ~/.claude/settings.json 并填入实际值",
+  "_version": "Claude Code v1.x",
+  "_last_updated": "2025-09-13",
+
+  "api": {
+    "anthropic_api_key": "sk-ant-api-xxx...xxx",
+    "model": "claude-3-5-sonnet-20241022",
+    "max_tokens": 8192,
+    "temperature": 0.1
+  },
+
+  "workspace": {
+    "default_project_path": "~/projects",
+    "auto_detect_project_type": true,
+    "preferred_language": "zh",
+    "timezone": "Asia/Shanghai"
+  },
+
+  "personalmanager_integration": {
+    "enabled": true,
+    "pm_command": "pm",
+    "auto_register_tools": true,
+    "context_sharing": {
+      "tasks": true,
+      "projects": true,
+      "preferences": true
+    }
+  },
+
+  "tools": {
+    "pm_capture": {
+      "enabled": true,
+      "auto_context": "current_project"
+    },
+    "pm_today": {
+      "enabled": true,
+      "default_count": 3
+    },
+    "pm_projects": {
+      "enabled": true,
+      "include_health_status": true
+    },
+    "pm_recommend": {
+      "enabled": true,
+      "context_aware": true
+    }
+  },
+
+  "ui": {
+    "show_pm_status": true,
+    "compact_mode": false,
+    "theme": "auto"
+  },
+
+  "_setup_instructions": [
+    "1. 复制此文件到 ~/.claude/settings.json",
+    "2. 替换 anthropic_api_key 为您的真实 API 密钥",
+    "3. 根据需要调整 workspace 和 tools 配置",
+    "4. 运行 pm setup 确保 PersonalManager 已正确初始化",
+    "5. 在 Claude Code 中测试: 询问 '帮我查看今天的推荐任务'"
+  ]
+}

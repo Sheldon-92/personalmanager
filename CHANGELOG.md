@@ -5,6 +5,22 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 新增 (Added) - Sprint 1 (2025-09-14)
+- **AI 工作空间功能**:
+  - `pm workspace init [--force] [--root <path>]`: 初始化工作空间三件套配置
+  - `pm agent status [--json] [--root <path>]`: 验证工作空间配置状态
+  - `pm agent prompt --print|--write`: 编译项目指令（库功能就绪）
+- **Prompt 编译器**:
+  - 核心编译器: `src/pm/agent/prompt_compiler.py`
+  - 平台片段生成器: `src/pm/agent/platform_snippets.py`
+  - Claude/Gemini 平台指令样例: `docs/samples/prompt_compiler/`
+- **测试增强**:
+  - CLI 端到端测试: 14个测试用例
+  - Agent 编译器测试: 32个测试用例
+  - 沙箱环境兼容性修复（HOME环境变量）
+
 ## [0.1.0] - 2025-01-15
 
 ### 新增 (Added)

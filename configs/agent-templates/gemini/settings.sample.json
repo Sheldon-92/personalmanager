@@ -1,0 +1,63 @@
+{
+  "_comment": "Gemini CLI 配置模板 - 请复制到 ~/.gemini/config.json 并填入实际值",
+  "_version": "Gemini CLI v2.x",
+  "_last_updated": "2025-09-13",
+
+  "api": {
+    "google_api_key": "AIzaSyXXX...XXX",
+    "model": "gemini-1.5-pro-latest",
+    "generation_config": {
+      "temperature": 0.1,
+      "top_p": 0.8,
+      "max_output_tokens": 8192
+    }
+  },
+
+  "workspace": {
+    "project_root": "~/projects",
+    "auto_project_detection": true,
+    "preferred_locale": "zh-CN",
+    "timezone": "Asia/Shanghai"
+  },
+
+  "personalmanager_tools": {
+    "enabled": true,
+    "pm_binary_path": "pm",
+    "tool_registration": {
+      "auto_discover": true,
+      "include_context": true
+    },
+    "command_mapping": {
+      "task_capture": "pm capture",
+      "daily_recommend": "pm today",
+      "project_overview": "pm projects overview",
+      "smart_recommend": "pm recommend"
+    }
+  },
+
+  "integration": {
+    "context_injection": {
+      "current_tasks": true,
+      "project_status": true,
+      "user_preferences": true
+    },
+    "response_formatting": {
+      "use_pm_style": true,
+      "rich_output": true
+    }
+  },
+
+  "safety": {
+    "privacy_mode": true,
+    "data_retention": "session_only",
+    "external_calls": "user_consent"
+  },
+
+  "_setup_instructions": [
+    "1. 复制此文件到 ~/.gemini/config.json",
+    "2. 替换 google_api_key 为您的 Gemini API 密钥",
+    "3. 根据项目路径调整 workspace 配置",
+    "4. 运行 pm setup 确保 PersonalManager 系统已初始化",
+    "5. 在 Gemini CLI 中测试: '显示我的项目状态概览'"
+  ]
+}

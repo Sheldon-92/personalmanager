@@ -41,6 +41,10 @@ from pm.cli.commands.deep_work import deep_work_app
 from pm.cli.commands.review import review_app
 from pm.cli.commands.obsidian import obsidian_app
 from pm.cli.commands.doctor import doctor_app
+from pm.cli.commands.test import test_app
+from pm.cli.commands.workspace import workspace_app
+from pm.cli.commands.agent_tools import agent_app
+from pm.cli.commands.ai_router import ai_app
 
 app = typer.Typer(
     name="pm",
@@ -54,11 +58,30 @@ console = Console()
 
 @app.command("setup")
 def setup(
-    reset: bool = typer.Option(False, "--reset", help="重置所有配置")
+    reset: bool = typer.Option(False, "--reset", help="重置所有配置"),
+    guided: bool = typer.Option(False, "--guided", help="分步引导模式（详细配置）"),
+    quick: bool = typer.Option(False, "--quick", help="快速模式（使用默认值）"),
+    advanced: bool = typer.Option(False, "--advanced", help="高级模式（显示所有选项）")
 ) -> None:
-    """启动PersonalManager系统设置向导"""
+    """启动PersonalManager系统设置向导
+    
+    模式说明：
+    • 默认模式：标准交互式配置
+    • --guided：分步详细引导，适合新用户
+    • --quick：使用默认值快速完成，适合快速体验
+    • --advanced：显示高级选项，适合高级用户
+    """
     try:
-        setup_wizard(reset=reset)
+        # 确定设置模式
+        mode = "default"
+        if guided:
+            mode = "guided"
+        elif quick:
+            mode = "quick"
+        elif advanced:
+            mode = "advanced"
+        
+        setup_wizard(reset=reset, mode=mode)
         console.print(Panel(
             "[green]✅ PersonalManager 设置完成！\n"
             "现在您可以开始使用以下命令：\n"
@@ -432,6 +455,18 @@ app.add_typer(obsidian_app, name="obsidian")
 # 系统诊断命令组 - Phase 2新功能，环境自检与诊断
 app.add_typer(doctor_app, name="doctor")
 
+# 系统测试命令组 - Phase 2新功能，冒烟与端到端测试
+app.add_typer(test_app, name="test")
+
+# AI 工作空间命令组 - Sprint 1新功能，实验性
+app.add_typer(workspace_app, name="workspace")
+
+# AI Agent 工具命令组 - Sprint 1新功能，实验性
+app.add_typer(agent_app, name="agent")
+
+# AI 路由命令组 - Sprint 2新功能，自然语言意图路由
+app.add_typer(ai_app, name="ai")
+
 @report_app.command("update")
 def report_update(
     project_name: Optional[str] = typer.Option(None, "--name", "-n", help="项目名称（可选）"),
@@ -518,13 +553,14 @@ def main(
         return
     
     if ctx.invoked_subcommand is None:
-        # 检查是否已初始化
-        config = PMConfig()
-        if not config.is_initialized():
+        # 使用标准化错误检查
+        from pm.core.errors import check_system_initialized, format_error_message, ErrorCode
+        
+        error = check_system_initialized()
+        if error:
             console.print(Panel(
-                "[yellow]👋 欢迎使用 PersonalManager Agent！\n\n"
-                "看起来这是您第一次使用。请先运行设置向导：\n"
-                "[cyan]/pm setup[/cyan]",
+                f"[yellow]👋 欢迎使用 PersonalManager Agent！\n\n"
+                f"{error.get_full_message()}",
                 title="🚀 欢迎",
                 border_style="blue"
             ))

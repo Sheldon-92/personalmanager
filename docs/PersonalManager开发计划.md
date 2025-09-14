@@ -900,3 +900,29 @@ class DataConsistencyManager:
 ---
 
 **文档维护**: 本开发计划将随着项目进展定期更新，版本变更请参考项目发布说明。
+
+---
+
+## 新增阶段：AI 工作空间模式（规划）
+
+> 基于 BMAD 的配置驱动方法，引入“工作空间层 / 意图路由层 / 记忆与偏好层”，让 Agent 在项目目录内具备稳定身份与可解释的自然语言→命令执行路径。
+
+### Sprint 1 — 工作空间与 Prompt 编译器（1 周）
+- 产物：
+  - `.personalmanager/workspace-config.yaml`
+  - `.personalmanager/ai-agent-definition.md`
+  - `.personalmanager/interaction-patterns.json`
+- 规范：`docs/specs/workspace_config.md`、`docs/specs/prompt_compiler.md`
+- 验收：脚手架 2 分钟内完成，编译产物 < 10k 字符，`agent status` 校验通过
+
+### Sprint 2 — 意图路由与执行（1 周）
+- 协议：`pm ai route|execute` JSON 输出/输入约定（文档与样例）
+- 短语库：覆盖“今天做什么/记录/项目概览/项目状态/解释推荐”
+- 验收：UAT ≥ 90% 命中核心意图，低置信度先确认
+
+### Sprint 3 — 本地记忆与偏好（1 周）
+- 存储：事件日志 `events.jsonl`；画像 `profile.md`
+- 原则：隐私优先/脱敏/用户可清除
+- 验收：今日推荐与解释体现个性化依据；与推荐引擎联动
+
+> 注：本阶段仅交付文档、规范与样例；代码实现待后续任务落地。

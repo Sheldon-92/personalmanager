@@ -1,4 +1,4 @@
-# P1-01 — 命令与文档对齐（新增 `pm today` + 修正欢迎面板）
+# [Archived] P1-01 — 命令与文档对齐（新增 `pm today` + 修正欢迎面板）
 
 > 状态: In-Progress  
 > Owner: PO/Strategy（你）执行验收，Dev（claude）执行开发  

@@ -1,0 +1,229 @@
+{
+  "version": "1.0",
+  "locale": ["zh", "en"],
+  "description": "PersonalManager 自然语言意图映射规则",
+  "intents": [
+    {
+      "id": "today",
+      "description": "获取今日重点推荐",
+      "phrases": [
+        "今天做什么",
+        "今日重点",
+        "今天的任务",
+        "what should i do today",
+        "today's tasks",
+        "daily priorities"
+      ],
+      "pattern": null,
+      "command": "pm today",
+      "args_schema": {
+        "count": {
+          "type": "int",
+          "default": 3,
+          "min": 1,
+          "max": 10
+        }
+      },
+      "confirm": {
+        "low_confidence": "将获取今日推荐任务，确定吗？",
+        "low_confidence_en": "Will get today's recommendations, confirm?"
+      }
+    },
+    {
+      "id": "capture",
+      "description": "记录/捕获任务",
+      "phrases": [
+        "记录",
+        "记一下",
+        "添加任务",
+        "capture",
+        "add task",
+        "record"
+      ],
+      "pattern": "^(?:记录|记一下|添加任务|capture|add task|record)[:：\\s]+(?P<content>.+)$",
+      "command": "pm capture \"{content}\"",
+      "args_schema": {
+        "content": {
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 500
+        }
+      },
+      "confirm": {
+        "low_confidence": "将记录任务：{content}，确定吗？",
+        "low_confidence_en": "Will capture task: {content}, confirm?"
+      }
+    },
+    {
+      "id": "projects_overview",
+      "description": "项目状态总览",
+      "phrases": [
+        "项目概览",
+        "项目状态",
+        "所有项目",
+        "项目列表",
+        "overview projects",
+        "project status",
+        "all projects"
+      ],
+      "pattern": null,
+      "command": "pm projects overview",
+      "args_schema": {
+        "sort": {
+          "type": "string",
+          "default": "health",
+          "enum": ["health", "priority", "progress", "name"]
+        }
+      },
+      "confirm": {
+        "low_confidence": "将查看项目概览，确定吗？",
+        "low_confidence_en": "Will show projects overview, confirm?"
+      }
+    },
+    {
+      "id": "project_status",
+      "description": "单个项目状态",
+      "phrases": [
+        "项目进展",
+        "项目状态",
+        "project status",
+        "project progress"
+      ],
+      "pattern": "^(?P<name>.+?)\\s*(?:项目)?\\s*(?:进展|状态|status|progress)$",
+      "command": "pm project status \"{name}\"",
+      "args_schema": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "min_length": 1,
+          "max_length": 100
+        }
+      },
+      "confirm": {
+        "low_confidence": "将查看项目 {name} 的状态，确定吗？",
+        "low_confidence_en": "Will show status of project {name}, confirm?"
+      }
+    },
+    {
+      "id": "explain",
+      "description": "解释推荐原因",
+      "phrases": [
+        "为什么推荐",
+        "解释",
+        "explain",
+        "why recommend"
+      ],
+      "pattern": "^(?:为什么推荐|解释|explain|why recommend)\\s*(?P<id>[\\w-]+)$",
+      "command": "pm explain {id}",
+      "args_schema": {
+        "id": {
+          "type": "string",
+          "required": true,
+          "pattern": "^[\\w-]+$"
+        }
+      },
+      "confirm": {
+        "low_confidence": "将解释任务 {id} 的推荐原因，确定吗？",
+        "low_confidence_en": "Will explain recommendation for {id}, confirm?"
+      }
+    },
+    {
+      "id": "inbox",
+      "description": "查看收件箱",
+      "phrases": [
+        "收件箱",
+        "待处理",
+        "inbox",
+        "pending tasks"
+      ],
+      "pattern": null,
+      "command": "pm inbox",
+      "args_schema": {},
+      "confirm": {
+        "low_confidence": "将查看收件箱任务，确定吗？",
+        "low_confidence_en": "Will show inbox tasks, confirm?"
+      }
+    },
+    {
+      "id": "next_actions",
+      "description": "下一步行动",
+      "phrases": [
+        "下一步",
+        "接下来做什么",
+        "next actions",
+        "what's next"
+      ],
+      "pattern": null,
+      "command": "pm next",
+      "args_schema": {
+        "context": {
+          "type": "string",
+          "default": null,
+          "pattern": "^@\\w+$"
+        }
+      },
+      "confirm": {
+        "low_confidence": "将查看下一步行动列表，确定吗？",
+        "low_confidence_en": "Will show next actions, confirm?"
+      }
+    },
+    {
+      "id": "deepwork_start",
+      "description": "开始深度工作",
+      "phrases": [
+        "开始深度工作",
+        "进入专注模式",
+        "start deep work",
+        "focus mode"
+      ],
+      "pattern": "^(?:开始深度工作|进入专注模式|start deep work|focus mode)\\s*(?P<title>.*)$",
+      "command": "pm deepwork start \"{title}\"",
+      "args_schema": {
+        "title": {
+          "type": "string",
+          "required": false,
+          "default": ""
+        }
+      },
+      "confirm": {
+        "low_confidence": "将开始深度工作时段，确定吗？",
+        "low_confidence_en": "Will start deep work session, confirm?"
+      }
+    },
+    {
+      "id": "habits_today",
+      "description": "今日习惯",
+      "phrases": [
+        "今日习惯",
+        "习惯计划",
+        "today's habits",
+        "habit plan"
+      ],
+      "pattern": null,
+      "command": "pm habits today",
+      "args_schema": {},
+      "confirm": {
+        "low_confidence": "将查看今日习惯计划，确定吗？",
+        "low_confidence_en": "Will show today's habit plan, confirm?"
+      }
+    },
+    {
+      "id": "doctor",
+      "description": "系统诊断",
+      "phrases": [
+        "系统诊断",
+        "检查系统",
+        "system check",
+        "doctor"
+      ],
+      "pattern": null,
+      "command": "pm doctor main",
+      "args_schema": {},
+      "confirm": {
+        "low_confidence": "将运行系统诊断，确定吗？",
+        "low_confidence_en": "Will run system diagnostics, confirm?"
+      }
+    }
+  ]
+}

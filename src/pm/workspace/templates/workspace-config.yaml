@@ -1,0 +1,42 @@
+# PersonalManager 工作空间配置
+# 本文件定义了 AI Agent 的行为、权限和集成设置
+
+workspace:
+  name: my-project               # 工作空间名称
+  language: zh                   # 首选语言: zh|en
+  timezone: Asia/Shanghai        # 时区设置
+
+# 会话启动仪式配置
+startup:
+  enabled: true                  # 是否启用启动仪式
+  steps:                         # 启动步骤序列
+    - doctor                     # 系统诊断
+    - today                      # 今日推荐
+  doctor:
+    verbose: false               # 诊断详细级别
+  today:
+    count: 3                     # 推荐任务数量
+
+# AI Agent 平台配置
+agents:
+  preferred: claude              # 首选平台: claude|gemini
+  platforms:                     # 支持的平台列表
+    - claude
+    - gemini
+
+# 隐私与权限设置
+privacy:
+  external_calls: user_consent   # 外部调用策略: user_consent|deny_all
+  data_retention: session_only   # 数据保留策略: session_only|local_persist
+  redact_logs: true              # 是否脱敏日志
+
+# 上下文管理
+context:
+  always_load: []                # 始终加载的文件列表 (相对路径)
+  include_project_status: true   # 是否包含项目状态
+
+# 意图路由配置
+routing:
+  locale: auto                   # 路由语言: auto|zh|en
+  low_confidence_threshold: 0.5  # 低置信度阈值 (需用户确认)
+  high_confidence_threshold: 0.8 # 高置信度阈值 (可自动执行)

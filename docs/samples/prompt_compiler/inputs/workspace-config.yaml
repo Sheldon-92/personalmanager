@@ -1,0 +1,33 @@
+# PersonalManager 工作空间配置示例
+workspace:
+  name: my-project
+  language: zh
+  timezone: Asia/Shanghai
+
+startup:
+  enabled: true
+  steps:
+    - doctor
+    - today
+  doctor:
+    verbose: false
+  today:
+    count: 3
+
+agents:
+  preferred: claude
+  platforms: [claude, gemini]
+
+privacy:
+  external_calls: user_consent
+  data_retention: session_only
+  redact_logs: true
+
+context:
+  always_load: []
+  include_project_status: true
+
+routing:
+  locale: auto
+  low_confidence_threshold: 0.5
+  high_confidence_threshold: 0.8

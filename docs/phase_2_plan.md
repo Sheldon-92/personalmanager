@@ -1,6 +1,6 @@
 # Phase 2 计划 — 上手与测试（Test & Onboarding）
 
-> **目标**: 让新用户与 Agent 在10分钟内跑通主路径；建立可重复、可验证、可诊断的体验
+> **目标**: 让新用户与 Agent 在10分钟内跑通主路径；建立可重复、可验证、可诊断的体验；提供一行式安装（npx 引导器）
 > **版本**: v1.1.0
 > **Last Updated**: 2025-09-13
 
@@ -12,6 +12,7 @@ Phase 2 专注于用户体验优化和系统稳定性验证，确保 PersonalMan
 1. **10分钟上手体验**: 新用户能够在10分钟内完成安装、配置和基础功能演练
 2. **端到端可靠性**: 主要工作流程稳定可复现，错误处理完善
 3. **Agent 集成就绪**: 支持多平台 AI Agent 无缝接入和调试
+4. **一行式安装体验**: 提供 `npx` 引导器，降低远程环境部署门槛
 
 ## 详细任务规划
 
@@ -198,6 +199,30 @@ poetry run pm help --troubleshoot        # 故障排查
 - [ ] 用户反馈文档质量 > 4.0/5
 - [ ] 搜索友好度（SEO 优化）
 
+### P2-06: npx 安装引导器（npm 包）
+
+**目标**: 通过 `npx @personal-manager/pm-bootstrap` 一行式安装 PersonalManager（优先使用 pipx），安装完成后可直接运行 `pm --version` 与 `pm setup`。
+
+**范围**
+- 新建 npm 包 `@personal-manager/pm-bootstrap`（或 `personal-manager-bootstrap`），提供 bin 可执行 `pm-bootstrap`。
+- 自动检测 Python 与 pipx；优先通过 pipx 安装 GitHub Release 资产（wheel），失败回退 git+tag 安装；Windows 提供自动/半自动步骤。
+- 支持参数：`--version`（默认 v0.1.0 或 latest）、`--source release|git`。
+
+**实施要点**
+- 验证安装成功（`pm --version`）；若 PATH 未生效，提示使用 `pipx run pm --version` 或提供绝对路径。
+- 对缺少 Python/pipx、网络受限、权限问题提供可复制的修复命令与回退方案（离线 wheel、venv）。
+
+**交付物**
+- 代码：`npm/pm-bootstrap/`（`package.json`、`bin/pm-bootstrap.js`、`README.md`）。
+- 文档片段：用户指南的“npx 安装”小节（由文档负责人合并）。
+- （可选）CI：`.github/workflows/release.yml`（打 tag 触发 npm publish；需 NPM_TOKEN）。
+
+**验收标准**
+- [ ] 在至少一个 Unix 平台执行 `npx @personal-manager/pm-bootstrap@latest` 成功安装并输出 `pm --version`（v0.1.0）。
+- [ ] Windows 平台提供清晰可执行/半自动步骤，能够完成安装或给出一键命令。
+- [ ] 缺少 Python/pipx 的机器，输出的指引可完成安装。
+- [ ] 文档片段清晰、可直接合入用户指南。
+
 ## 质量保证体系
 
 ### 自动化测试策略
@@ -295,11 +320,12 @@ gantt
 ## 验收与交付
 
 ### 最终验收标准
-- [ ] 所有 P2 任务完成并通过验收
+- [ ] 所有 P2 任务完成并通过验收（P2-01 到 P2-06）
 - [ ] 端到端测试套件建立并通过
 - [ ] 用户文档完整且准确
 - [ ] 多平台安装成功验证
 - [ ] 性能基准达标
+- [ ] npx 引导器交付并在多平台验证通过
 
 ### 交付物清单
 1. **自动化测试套件** - 完整的测试脚本和 CI/CD 配置
@@ -317,4 +343,3 @@ gantt
 ---
 
 **Phase 2 愿景**: 通过系统化的测试和优化，让 PersonalManager 成为一个真正可靠、易用的生产级工具，为 Phase 3 的智能化功能打下坚实基础。
-

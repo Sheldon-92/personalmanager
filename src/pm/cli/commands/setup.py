@@ -24,25 +24,33 @@ from pm.tools.setup_tools import (
 console = Console()
 
 
-def setup_wizard(reset: bool = False) -> None:
+def setup_wizard(reset: bool = False, mode: str = "default") -> None:
     """PersonalManager设置向导 - 重构后使用AI可调用工具函数
     
-    根据US-015验收标准实现：
-    - 通过 `/pm setup` 启动设置向导
-    - 设置基本工作偏好（工作时间、精力周期等）
-    - 配置项目文件夹路径
-    - 选择启用的书籍理论模块
+    支持多种设置模式：
+    - default: 标准交互式配置
+    - guided: 分步详细引导，适合新用户  
+    - quick: 使用默认值快速完成，适合快速体验
+    - advanced: 显示高级选项，适合高级用户
+    
+    Args:
+        reset: 是否重置现有配置
+        mode: 设置模式（default/guided/quick/advanced）
     """
     
     # 检测是否在非交互式环境中运行
     is_interactive = sys.stdout.isatty() and sys.stdin.isatty() and os.getenv('CI') is None
     
-    if not is_interactive:
+    if not is_interactive or mode == "quick":
+        mode_title = "非交互模式" if not is_interactive else "快速设置模式"
+        mode_desc = ("检测到您在非交互式环境中运行（如CI/CD、脚本等）。\n" 
+                    "将使用默认配置完成初始化。") if not is_interactive else (
+                    "快速模式：使用推荐的默认配置，2分钟内完成设置。")
+        
         console.print(Panel(
-            "[yellow]🤖 非交互模式检测\n\n"
-            "检测到您在非交互式环境中运行（如CI/CD、脚本等）。\n"
-            "将使用默认配置完成初始化。",
-            title="非交互模式",
+            f"[yellow]🚀 {mode_title}\n\n"
+            f"{mode_desc}",
+            title=mode_title,
             border_style="yellow"
         ))
         
@@ -50,12 +58,29 @@ def setup_wizard(reset: bool = False) -> None:
         _initialize_with_defaults(reset)
         return
     
+    # 根据模式显示不同的欢迎消息
+    if mode == "guided":
+        welcome_title = "🧭 详细引导模式"
+        welcome_msg = ("PersonalManager 详细引导设置\n\n"
+                      "我将详细说明每个配置选项，帮助您了解每项设置的作用，\n"
+                      "并根据您的需求提供个性化建议。预计需要5-10分钟。")
+        border_style = "green"
+    elif mode == "advanced":
+        welcome_title = "⚙️ 高级配置模式" 
+        welcome_msg = ("PersonalManager 高级配置\n\n"
+                      "显示所有可用配置选项，包括高级功能和调试选项。\n"
+                      "适合对系统有深入了解的用户。")
+        border_style = "purple"
+    else:  # default mode
+        welcome_title = "🚀 PersonalManager Agent 设置向导"
+        welcome_msg = ("欢迎使用 PersonalManager！我们将引导您完成初始设置，\n"
+                      "这将帮助系统为您提供个性化的管理建议。")
+        border_style = "blue"
+    
     console.print(Panel(
-        "[bold blue]🚀 PersonalManager Agent 设置向导\n\n"
-        "欢迎使用 PersonalManager！我们将引导您完成初始设置，\n"
-        "这将帮助系统为您提供个性化的管理建议。",
+        f"[bold blue]{welcome_title}\n\n{welcome_msg}",
         title="欢迎",
-        border_style="blue"
+        border_style=border_style
     ))
     
     # 检查当前系统状态
@@ -71,42 +96,113 @@ def setup_wizard(reset: bool = False) -> None:
             console.print(f"[yellow]ℹ️ {status_msg}")
     
     if reset:
-        console.print("[yellow]⚠️ 重置模式：将清除现有配置")
-        keep_data = Confirm.ask("是否保留用户数据？", default=True)
-        success, reset_msg, reset_info = reset_system(keep_data=keep_data)
-        if success:
-            console.print(f"[green]✅ {reset_msg}")
+        console.print(Panel(
+            "[red]⚠️ 危险操作确认\n\n"
+            "重置模式将清除现有配置文件和设置。\n"
+            "这是一个不可逆操作！",
+            title="重置确认",
+            border_style="red"
+        ))
+        
+        if not Confirm.ask("[yellow]确认要重置所有配置吗？", default=False):
+            console.print("[blue]📋 取消重置，继续正常设置流程")
         else:
-            console.print(f"[red]❌ {reset_msg}")
-            return
+            keep_data = Confirm.ask(
+                "[yellow]是否保留用户数据（任务、项目、习惯记录）？\n"
+                "选择 No 将[red]永久删除[/red]所有用户数据", 
+                default=True
+            )
+            
+            if not keep_data:
+                console.print("[red]⚠️ 最后确认：这将删除所有任务、项目和习惯数据！")
+                final_confirm = Confirm.ask("[red]真的要删除所有数据吗？", default=False)
+                if not final_confirm:
+                    keep_data = True
+                    console.print("[blue]📋 已保留用户数据")
+            
+            success, reset_msg, reset_info = reset_system(keep_data=keep_data)
+            if success:
+                console.print(f"[green]✅ {reset_msg}")
+            else:
+                console.print(f"[red]❌ {reset_msg}")
+                return
     
     # 1. 基本工作偏好设置
-    console.print("\n[bold]📅 工作时间偏好设置")
+    if mode == "guided":
+        console.print("\n[bold]📅 第1步：工作时间偏好设置 (1/6)")
+        console.print("💡 [dim]工作时间用于智能任务推荐和精力管理，帮助系统在合适的时间推荐合适的任务[/dim]")
+    elif mode == "advanced":
+        console.print("\n[bold]📅 工作时间偏好设置 [高级配置]")
+    else:
+        console.print("\n[bold]📅 工作时间偏好设置")
+    
+    if mode == "guided":
+        work_start_prompt = ("您通常几点开始工作？（24小时制，如：9表示上午9点）\n"
+                           "💡 这将帮助系统避免在非工作时间推荐工作任务")
+        work_end_prompt = ("您通常几点结束工作？（24小时制，如：18表示下午6点）\n"
+                         "💡 这将用于计算工作时长和安排任务优先级")
+    else:
+        work_start_prompt = "请设置您的工作开始时间（24小时制）"
+        work_end_prompt = "请设置您的工作结束时间（24小时制）"
     
     work_start = IntPrompt.ask(
-        "请设置您的工作开始时间（24小时制）",
+        work_start_prompt,
         default=9,
         show_default=True
     )
     
     work_end = IntPrompt.ask(
-        "请设置您的工作结束时间（24小时制）", 
+        work_end_prompt, 
         default=18,
         show_default=True
     )
     
+    if mode == "guided":
+        console.print(f"✅ 工作时间已设定：{work_start}:00 - {work_end}:00 （共{work_end-work_start}小时）")
+    
     # 2. 功能模块配置
-    console.print("\n[bold]🔧 功能模块配置")
+    if mode == "guided":
+        console.print("\n[bold]🔧 第2步：功能模块配置 (2/6)")
+        console.print("💡 [dim]选择启用哪些功能模块，您可以稍后在配置中修改[/dim]")
+    elif mode == "advanced":
+        console.print("\n[bold]🔧 功能模块配置 [隐私与集成选项]")
+    else:
+        console.print("\n[bold]🔧 功能模块配置")
     
-    enable_ai = Confirm.ask(
-        "是否启用AI工具（报告生成、智能分析等）？", 
-        default=True
-    )
+    if mode == "guided":
+        ai_prompt = ("是否启用AI工具？\n"
+                    "💡 包括：智能项目报告生成、任务分析、个性化推荐\n"
+                    "ℹ️ 数据仅在本地处理，不会上传到云端")
+        google_prompt = ("是否启用Google服务集成？\n"
+                        "💡 包括：Calendar日程同步、Tasks任务同步、Gmail重要邮件扫描\n"
+                        "⚠️ 需要Google账号授权，会访问您的Google数据")
+    elif mode == "advanced":
+        ai_prompt = ("启用AI工具？（支持：OpenAI, Gemini, Claude）\n"
+                    "高级选项：自定义AI服务端点、模型选择")
+        google_prompt = ("启用Google集成？（OAuth2认证）\n"  
+                        "高级选项：自定义应用凭据、API配额管理")
+    else:
+        ai_prompt = "是否启用AI工具（报告生成、智能分析等）？"
+        google_prompt = "是否启用Google集成（Calendar、Tasks、Gmail）？"
     
-    enable_google = Confirm.ask(
-        "是否启用Google集成（Calendar、Tasks、Gmail）？", 
-        default=True
-    )
+    enable_ai = Confirm.ask(ai_prompt, default=True)
+    
+    # 在guided模式下给出隐私建议
+    if mode == "guided":
+        if not enable_ai:
+            console.print("✅ AI工具已禁用，系统将以完全离线模式运行")
+        else:
+            console.print("✅ AI工具已启用，将提供智能分析功能")
+    
+    # Google集成有隐私影响，默认值在guided模式下设为False
+    google_default = False if mode == "guided" else True
+    enable_google = Confirm.ask(google_prompt, default=google_default)
+    
+    if mode == "guided":
+        if not enable_google:
+            console.print("✅ Google集成已禁用，优先保护隐私")
+        else:
+            console.print("⚠️ Google集成已启用，稍后需要进行授权")
     
     # 3. 项目根目录配置
     console.print("\n[bold]📁 项目根目录配置")

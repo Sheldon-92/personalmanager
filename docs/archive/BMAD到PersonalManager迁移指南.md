@@ -1,8 +1,9 @@
-# BMAD到PersonalManager迁移指南
+# [Archived] BMAD到PersonalManager迁移指南
 
 > **版本**: v1.0  
 > **创建日期**: 2025-09-11  
 > **迁移框架**: BMAD v4.43.1 → PersonalManager v1.0  
+> 说明：本篇为历史迁移背景，最新规范请参考 `docs/specs/*` 与 `docs/roadmap/*`。
 > **安全等级**: 高安全性，可完全回滚  
 
 ## 📋 目录
