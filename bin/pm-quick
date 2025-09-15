@@ -1,0 +1,31 @@
+#!/bin/bash
+# PersonalManager快速命令菜单
+# 提供快捷命令选择界面
+
+cd "$(dirname "$0")/.."
+
+echo "🚀 PersonalManager 快捷命令菜单"
+echo "================================"
+echo "1. 📊 简报 (Briefing)"
+echo "2. 💬 交互模式 (Interactive)"
+echo "3. 📥 收件箱 (Inbox)"
+echo "4. 📧 Gmail预览"
+echo "5. 📅 日历"
+echo "6. 🎯 今日任务"
+echo "7. 🔍 澄清任务"
+echo "8. 📝 快速捕获"
+echo "================================"
+echo -n "请选择 (1-8): "
+read choice
+
+case $choice in
+    1) ./bin/pm-local briefing ;;
+    2) ./bin/pm-local interactive ;;
+    3) ./bin/pm-local inbox ;;
+    4) ./bin/pm-gmail ;;
+    5) ./bin/pm-calendar ;;
+    6) ./bin/pm-local today ;;
+    7) ./bin/pm-local clarify ;;
+    8) ./bin/pm-local capture ;;
+    *) echo "无效选择"; exit 1 ;;
+esac

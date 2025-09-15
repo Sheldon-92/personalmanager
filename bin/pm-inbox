@@ -1,0 +1,6 @@
+#!/bin/bash
+# PersonalManager收件箱快捷命令
+# 快速查看任务收件箱
+
+cd "$(dirname "$0")/.."
+./bin/pm-local inbox "$@"
