@@ -5,6 +5,50 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.0-rc1] - 2025-09-15
+
+### 重大更新 (Major Update)
+
+#### 🚀 项目本地化架构
+- **无需全局安装**: 所有功能在项目目录内运行
+- **避免系统污染**: 不再需要pipx或全局pip安装
+- **统一环境管理**: 解决了多环境混乱问题
+
+#### 💬 交互模式与斜杠命令
+- **斜杠命令系统**: `/pm`, `/gmail`, `/task` 等快捷命令
+- **编号选择界面**: 支持 1,2,3 或 1-3 格式的快速选择
+- **交互式会话**: 持续的对话式操作体验
+
+#### 📊 双向简报系统
+- **用户工作简报**: 高密度任务、日程、习惯信息
+- **Claude技术简报**: AI上下文和技术状态摘要
+- **信息密度优化**: 展示具体任务而非抽象统计
+
+#### 🔗 Obsidian深度集成
+- **习惯同步**: 自动同步习惯到Obsidian笔记
+- **项目管理**: 项目状态双向同步
+- **7个子命令**: 完整的Obsidian操作支持
+
+### 新增 (Added)
+- `bin/pm-briefing` - 快速简报命令
+- `bin/pm-interactive` - 交互模式启动器
+- `bin/pm-inbox` - 收件箱快捷命令
+- `bin/pm-quick` - 快速菜单选择器
+- `src/pm/core/briefing_generator.py` - 双向简报生成器
+- `src/pm/core/interaction_manager.py` - 交互管理核心
+- `src/pm/core/command_executor.py` - 命令执行引擎
+- `scripts/sync_habits_to_obsidian.py` - Obsidian同步脚本
+
+### 改进 (Changed)
+- 简化安装流程，采用项目本地化方式
+- 优化命令执行流程，支持Poetry和直接Python两种方式
+- 改进用户反馈机制，提供更清晰的错误提示
+
+### 移除 (Removed)
+- 移除全局安装需求
+- 归档过时的安装脚本到 `archived/` 目录
+- 清理测试环境，统一到单一开发环境
+
 ## [1.0.0-GA-rc2] - 2025-09-14
 
 ### 发布决策 (Release Decision)

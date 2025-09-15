@@ -1,69 +1,89 @@
-# PersonalManager - 您的AI个人效能操作系统
+# PersonalManager - AI驱动的个人效能管理系统
 
-**PersonalManager** 是一个功能强大的、AI驱动的个人效能工具集，旨在通过自然语言交互，帮助您无缝地管理项目、任务、目标、习惯和专注力。它深度整合了多种经典的生产力方法论，是您在数字时代实现“心如止水”和“深度工作”的智能伙伴。
+**PersonalManager** 是一个基于项目本地化的AI个人效能工具，通过自然语言交互管理任务、项目、习惯和专注力。采用项目本地化架构，避免全局污染，支持斜杠命令和编号选择的交互方式。
 
----
-
-## 核心特性
-
-- **🗣️ 自然语言交互**: 通过与AI Agent（如Gemini, Claude）对话，直接管理您的个人效能系统。
-- **🗂️ 项目管理 (独创)**: 独创的“以报告为中心”的项目管理模式。您只需用自然语言编写 `PROJECT_STATUS.md`，系统即可自动解析、跟踪和分析项目状态。
-- **✅ 任务管理 (GTD)**: 内置完整的《搞定》(GTD)工作流，支持任务的快速捕获、理清、组织和回顾。
-- **🎯 习惯养成 (原子习惯)**: 基于《原子习惯》理论，提供强大的习惯创建、跟踪和分析功能，助您建立良好习惯。
-- **🚀 深度工作 (Deep Work)**: 基于《深度工作》理论，帮助您规划、执行和复盘高质量的专注工作时段。
-- **🤔 回顾与反思**: 系统化的每周回顾、项目复盘和决策追踪功能，助您持续学习和成长。
-- **🔗 Google服务集成**: 无缝集成Google Calendar, Tasks, 和 Gmail，自动将日程和重要邮件转化为任务。
-- **💡 Obsidian集成**: 连接您的Obsidian知识库，实现笔记的创建、搜索和任务同步。
-- **🧠 智能推荐引擎**: 基于多种生产力理论，结合您的个人偏好，为您提供每日任务的智能推荐。
+**当前版本**: v0.4.0-rc1 (2025-09-15)
 
 ---
 
-## 快速开始
+## 🎯 核心特性
 
-### 1. 安装
+### 新增功能 (v0.4.0)
+- **💬 交互模式**: 斜杠命令 (`/pm`, `/gmail`, `/task`) 和编号选择界面
+- **📊 双向简报**: 用户工作简报 + Claude技术简报的高密度信息展示
+- **🔗 Obsidian深度集成**: 7个子命令完整同步习惯、项目和笔记
+- **🚀 项目本地化**: 所有功能在项目目录内运行，无需全局安装
+
+### 基础功能
+- **✅ GTD任务管理**: 完整的收件箱、理清、下一步行动工作流
+- **🎯 习惯养成**: 基于《原子习惯》的习惯跟踪系统
+- **📂 项目管理**: 以报告为中心的项目状态跟踪
+- **🧠 智能推荐**: AI驱动的每日任务推荐
+- **🔗 Google集成**: Calendar、Tasks、Gmail无缝同步
+
+---
+
+## 🚀 快速开始
+
+### 1. 克隆并进入项目
 
 ```bash
-# 克隆项目
-git clone <repository-url>
+git clone https://github.com/Sheldon-92/personalmanager.git
 cd personal-manager
-
-# 安装依赖
-poetry install
 ```
 
-### 2. 配置
-
-首次运行时，系统会引导您完成设置。您也可以随时运行以下命令进行配置：
+### 2. 项目本地化使用（推荐）
 
 ```bash
-# 启动交互式设置向导
-poetry run pm setup
+# 使用Poetry环境（自动检测）
+./bin/pm-local --version
+
+# 或直接使用Python
+PYTHONPATH=src python3 -m pm.cli.main --version
 ```
-设置向导将帮助您配置Google API凭证、项目根目录、个人偏好等。
 
-### 3. 基本用法
+### 3. 快捷命令
 
-`PersonalManager` 主要通过CLI命令进行交互。所有命令均可通过 `poetry run pm <command>` 或项目级启动器 `./bin/pm-local <command>` 执行。
-
-#### Agent 使用场景
-
-PersonalManager 专为与 AI Agent（如 Claude、Gemini CLI）协作而设计。通过自然语言对话，Agent 可以自动将您的需求转换为具体的 CLI 命令：
-
-**使用项目级启动器**：
 ```bash
-# Agent 会自动使用项目级入口点
-./bin/pm-local projects overview
-./bin/pm-local today
-./bin/pm-local capture "准备下周的项目汇报"
+# 斜杠命令快捷方式
+./bin/pm-briefing       # 生成双向简报
+./bin/pm-interactive    # 启动交互模式
+./bin/pm-inbox          # 查看任务收件箱
+./bin/pm-quick          # 快速命令菜单
 ```
 
-**自然语言交互示例**：
-- **用户**："帮我查看今天的重点任务"
-- **Agent**：执行 `./bin/pm-local today`
-- **用户**："添加一个任务：准备团队会议"  
-- **Agent**：执行 `./bin/pm-local capture "准备团队会议"`
+---
 
-> 💡 **推荐**：在远程环境中使用 Claude Code、Gemini CLI 或其他 Agent 工具，通过自然语言轻松管理您的个人效能系统。
+## 💡 使用方式
+
+### 交互模式（推荐）
+
+启动交互模式，支持斜杠命令和编号选择：
+
+```bash
+./bin/pm-interactive
+# 或
+./start_interactive.sh
+```
+
+在交互模式中：
+- 输入 `/` 查看所有斜杠命令
+- 输入 `/pm` 生成简报
+- 输入 `/gmail` 预览邮件
+- 输入数字选择操作（如 1,2,3 或 1-3）
+
+### 命令行模式
+
+```bash
+# 基础命令格式
+./bin/pm-local <command> [options]
+
+# 常用命令示例
+./bin/pm-local briefing         # 生成双向简报
+./bin/pm-local inbox            # 查看收件箱
+./bin/pm-local today            # 今日任务推荐
+./bin/pm-local capture "任务"   # 快速捕获任务
+```
 
 #### **项目管理**
 - `pm projects overview`: 查看所有项目的状态概览。
