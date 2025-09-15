@@ -38,17 +38,125 @@ pip install -e .
 
 ### Offline Installation
 
+#### Method 1: Pre-built Offline Package (Recommended)
+
+```bash
+# Create offline package (requires internet initially)
+bash scripts/package_offline.sh
+
+# Transfer personalmanager-offline-v*.tar.gz to target system
+# Extract and install (no internet required)
+tar -xzf personalmanager-offline-v*.tar.gz
+cd personalmanager-offline
+./install_offline.sh
+
+# Verify installation
+pm doctor
+```
+
+#### Method 2: Online installer with offline mode
+
 ```bash
 ./install.sh --no-poetry --offline
 ```
 
 ### Custom Options
 
+#### Online Installer Options
 - `--dev`: Install development dependencies
 - `--no-poetry`: Use pip instead of Poetry
 - `--offline`: Skip online checks
 - `--verbose`: Detailed output
 - `--force`: Force reinstallation
+
+#### Offline Packaging Options
+```bash
+# Create offline package with options
+bash scripts/package_offline.sh [OPTIONS]
+
+--help              Show help message
+--output DIR        Output directory (default: ./dist)
+--include-dev       Include development dependencies
+--compress LEVEL    Compression level 1-9 (default: 6)
+--platform          Target platform (auto-detect)
+--verbose           Enable verbose output
+--clean             Clean build directory before packaging
+```
+
+#### Offline Package Examples
+```bash
+# Basic offline package
+bash scripts/package_offline.sh
+
+# Include development dependencies
+bash scripts/package_offline.sh --include-dev
+
+# Custom output directory with maximum compression
+bash scripts/package_offline.sh --output ~/packages --compress 9
+
+# Clean build and verbose output
+bash scripts/package_offline.sh --clean --verbose
+```
+
+## Offline Installation Deep Dive
+
+### Creating Offline Packages
+
+The offline packaging system creates self-contained installation packages that include all Python dependencies and can be installed on systems without internet connectivity.
+
+#### Package Contents
+- PersonalManager source code
+- All Python dependencies (.whl and .tar.gz files)
+- Self-contained installer script
+- Documentation and configuration templates
+- Version information and checksums
+
+#### Package Creation Process
+```bash
+# Step 1: Create the offline package (requires internet)
+cd personal-manager
+bash scripts/package_offline.sh
+
+# Output: dist/personalmanager-offline-v0.1.0.tar.gz
+```
+
+#### Transfer to Target System
+```bash
+# Copy to target system via USB, network share, etc.
+scp dist/personalmanager-offline-v*.tar.gz user@target-system:/tmp/
+```
+
+### Offline Installation Process
+
+#### Step 1: Extract Package
+```bash
+# On target system (no internet required)
+cd /tmp
+tar -xzf personalmanager-offline-v*.tar.gz
+cd personalmanager-offline
+```
+
+#### Step 2: Run Installer
+```bash
+# Default installation to ~/.local/personalmanager
+./install_offline.sh
+
+# Custom installation directory
+./install_offline.sh /opt/personalmanager
+```
+
+#### Step 3: Verify Installation
+```bash
+# Check installation health
+pm doctor
+
+# Quick system check
+pm doctor --quick
+
+# Test basic functionality
+pm capture "Test task"
+pm today
+```
 
 ## System Diagnostics
 

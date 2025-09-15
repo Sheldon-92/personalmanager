@@ -13,6 +13,7 @@ import structlog
 
 from pm.core.config import PMConfig
 from .oauth_manager import OAuthManager, OAuthTokenInfo
+from .account_manager import AccountManager
 
 logger = structlog.get_logger()
 
@@ -46,24 +47,26 @@ class GoogleAuthManager:
     def __init__(self, config: PMConfig):
         self.config = config
         self.oauth_manager = OAuthManager(config)
-        
+        self.account_manager = AccountManager(config)
+
         # 加载Google OAuth客户端配置
         self._credentials = self._load_google_credentials()
         self.client_id = self._get_google_client_id()
         self.client_secret = self._get_google_client_secret()
         self.redirect_uri = "http://localhost:8080/oauth/callback"
-        
+
         logger.info("Google Auth Manager initialized",
                    has_credentials=bool(self._credentials),
                    client_id_set=bool(self.client_id))
     
-    def start_google_auth(self, services: list = None, minimal: bool = False) -> Tuple[str, str]:
+    def start_google_auth(self, services: list = None, minimal: bool = False, account_alias: str = None) -> Tuple[str, str]:
         """启动Google OAuth认证流程
         
         Args:
             services: 需要授权的服务列表，默认为所有服务
             minimal: 是否使用最小权限集合（用于测试）
-            
+            account_alias: 账号别名，用于多账号管理
+
         Returns:
             Tuple[认证URL, state参数]
         """
@@ -128,13 +131,24 @@ class GoogleAuthManager:
             logger.error("Google authentication failed", message=message)
             return False, message
     
-    def get_google_token(self) -> Optional[OAuthTokenInfo]:
-        """获取Google访问令牌"""
-        return self.oauth_manager.get_token("google")
+    def get_google_token(self, account_alias: str = None) -> Optional[OAuthTokenInfo]:
+        """获取Google访问令牌
+
+        Args:
+            account_alias: 账号别名，如果为None则使用默认账号
+        """
+        if account_alias is None:
+            account_alias = self.account_manager.get_default_account()
+
+        return self.oauth_manager.get_token("google", account_alias)
     
-    def is_google_authenticated(self) -> bool:
-        """检查是否已通过Google认证"""
-        token = self.get_google_token()
+    def is_google_authenticated(self, account_alias: str = None) -> bool:
+        """检查是否已通过Google认证
+
+        Args:
+            account_alias: 账号别名，如果为None则使用默认账号
+        """
+        token = self.get_google_token(account_alias)
         return token is not None and not token.is_expired
     
     def revoke_google_auth(self) -> bool:
@@ -318,3 +332,70 @@ class GoogleAuthManager:
         except Exception as e:
             logger.warning("Failed to open browser", error=str(e))
             print(f"请手动打开以下链接进行认证: {auth_url}")
+
+    def get_credentials_for_account(self, account_alias: str) -> Optional[Dict[str, Any]]:
+        """获取指定账号的凭证信息"""
+        credentials_path = self.account_manager.get_credentials_path(account_alias)
+        if not credentials_path or not credentials_path.exists():
+            return None
+
+        try:
+            with open(credentials_path, 'r', encoding='utf-8') as f:
+                credentials = json.load(f)
+
+            if self._validate_credentials_format(credentials):
+                return credentials
+            return None
+        except Exception as e:
+            logger.error("Error loading account credentials",
+                        account=account_alias, error=str(e))
+            return None
+
+    def is_account_credentials_configured(self, account_alias: str) -> bool:
+        """检查指定账号的凭证是否已配置"""
+        credentials = self.get_credentials_for_account(account_alias)
+        if not credentials:
+            return False
+
+        client_id = self._extract_client_id(credentials)
+        client_secret = self._extract_client_secret(credentials)
+
+        return bool(client_id) and bool(client_secret)
+
+    def list_account_status(self) -> Dict[str, Dict[str, Any]]:
+        """列出所有账号的认证状态"""
+        accounts = self.account_manager.list_accounts()
+        status = {}
+
+        for alias, account_info in accounts.items():
+            token = self.get_google_token(alias)
+            status[alias] = {
+                'display_name': account_info.get('display_name', alias),
+                'email': account_info.get('email', ''),
+                'authenticated': token is not None and not token.is_expired if token else False,
+                'expired': token.is_expired if token else False,
+                'expires_at': token.expires_at.isoformat() if token and token.expires_at else None,
+                'credentials_configured': self.is_account_credentials_configured(alias)
+            }
+
+        return status
+
+    def _extract_client_id(self, credentials: Dict[str, Any]) -> str:
+        """从凭证中提取client_id"""
+        if 'client_id' in credentials:
+            return credentials['client_id']
+        elif 'web' in credentials and 'client_id' in credentials['web']:
+            return credentials['web']['client_id']
+        elif 'installed' in credentials and 'client_id' in credentials['installed']:
+            return credentials['installed']['client_id']
+        return ""
+
+    def _extract_client_secret(self, credentials: Dict[str, Any]) -> str:
+        """从凭证中提取client_secret"""
+        if 'client_secret' in credentials:
+            return credentials['client_secret']
+        elif 'web' in credentials and 'client_secret' in credentials['web']:
+            return credentials['web']['client_secret']
+        elif 'installed' in credentials and 'client_secret' in credentials['installed']:
+            return credentials['installed']['client_secret']
+        return ""

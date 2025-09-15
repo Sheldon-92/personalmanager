@@ -1,0 +1,27 @@
+{
+  "status": "success",
+  "command": "T-SEC.complete",
+  "data": {
+    "artifacts": [
+      "src/pm/security/rbac.py",
+      "src/pm/security/audit.py",
+      "src/pm/security/secrets.py",
+      "src/pm/security/scanner.py",
+      "src/pm/security/sbom_generator.py",
+      "SBOM.json",
+      "docs/security/DPIA.md",
+      "docs/reports/phase_5/security_verification.md"
+    ],
+    "run_cmds": [
+      "python -m pm.security.scanner"
+    ],
+    "metrics": {
+      "high_risk": 0,
+      "audit_gaps": 0,
+      "sbom_valid": true
+    }
+  },
+  "metadata": {
+    "version": "1.0.0"
+  }
+}

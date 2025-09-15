@@ -279,58 +279,88 @@ class OAuthManager:
             logger.error("Error handling OAuth callback", error=str(e))
             return False, None, f"处理认证回调时发生错误: {str(e)}"
     
-    def get_token(self, service_name: str) -> Optional[OAuthTokenInfo]:
-        """获取指定服务的有效token"""
-        
-        token_file = self.tokens_dir / f"{service_name}_token.json"
-        
+    def get_token(self, service_name: str, account_alias: Optional[str] = None) -> Optional[OAuthTokenInfo]:
+        """获取指定服务的有效token
+
+        Args:
+            service_name: 服务名称（如"google"）
+            account_alias: 账号别名，如果为None则使用原service_name
+        """
+
+        # 如果指定了账号别名，构造带别名的服务名称
+        if account_alias and account_alias != "default":
+            token_service_name = f"{service_name}_{account_alias}"
+        else:
+            token_service_name = service_name
+
+        token_file = self.tokens_dir / f"{token_service_name}_token.json"
+
         if not token_file.exists():
             return None
-        
+
         try:
             with open(token_file, 'r', encoding='utf-8') as f:
                 token_data = json.load(f)
-            
+
             token_info = OAuthTokenInfo.from_dict(token_data)
-            
+
             # 检查是否过期
             if token_info.is_expired:
-                logger.info("Token expired, attempting refresh", service=service_name)
-                # 这里应该尝试刷新token
-                # refreshed_token = self.refresh_token(service_name, token_info)
-                # if refreshed_token:
-                #     return refreshed_token
+                logger.info("Token expired, attempting refresh",
+                           service=token_service_name,
+                           account=account_alias)
+                # 尝试刷新token
+                refreshed_token = self.refresh_token(token_service_name, token_info)
+                if refreshed_token:
+                    return refreshed_token
                 return None
-            
+
             return token_info
-            
+
         except Exception as e:
-            logger.error("Error loading token", service=service_name, error=str(e))
+            logger.error("Error loading token",
+                        service=token_service_name,
+                        account=account_alias,
+                        error=str(e))
             return None
     
-    def save_token(self, service_name: str, token_info: OAuthTokenInfo) -> bool:
-        """安全保存token信息"""
-        
-        token_file = self.tokens_dir / f"{service_name}_token.json"
-        
+    def save_token(self, service_name: str, token_info: OAuthTokenInfo, account_alias: Optional[str] = None) -> bool:
+        """安全保存token信息
+
+        Args:
+            service_name: 服务名称（如"google"）
+            token_info: Token信息
+            account_alias: 账号别名，如果为None则使用原service_name
+        """
+
+        # 如果指定了账号别名，构造带别名的服务名称
+        if account_alias and account_alias != "default":
+            token_service_name = f"{service_name}_{account_alias}"
+        else:
+            token_service_name = service_name
+
+        token_file = self.tokens_dir / f"{token_service_name}_token.json"
+
         try:
             # 确保tokens目录权限安全
             self.tokens_dir.chmod(0o700)
-            
+
             with open(token_file, 'w', encoding='utf-8') as f:
                 json.dump(token_info.to_dict(), f, indent=2)
-            
+
             # 设置文件权限为仅当前用户可读写
             token_file.chmod(0o600)
-            
-            logger.info("Token saved securely", 
-                       service=service_name,
+
+            logger.info("Token saved securely",
+                       service=token_service_name,
+                       account=account_alias,
                        file=token_file.name)
             return True
-            
+
         except Exception as e:
-            logger.error("Error saving token", 
-                        service=service_name, 
+            logger.error("Error saving token",
+                        service=token_service_name,
+                        account=account_alias,
                         error=str(e))
             return False
     
@@ -351,7 +381,106 @@ class OAuthManager:
                         service=service_name, 
                         error=str(e))
             return False
-    
+
+    def refresh_token(self, service_name: str, token_info: OAuthTokenInfo) -> Optional[OAuthTokenInfo]:
+        """刷新已过期的access token
+
+        Args:
+            service_name: 服务名称
+            token_info: 当前的token信息
+
+        Returns:
+            刷新后的token信息，如果刷新失败则返回None
+        """
+        if not token_info.refresh_token:
+            logger.warning("No refresh token available", service=service_name)
+            return None
+
+        try:
+            import requests
+
+            # Google的token刷新端点
+            refresh_url = "https://oauth2.googleapis.com/token"
+
+            # 准备刷新请求数据
+            refresh_data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': token_info.refresh_token,
+                'client_id': self._get_client_id_for_service(service_name),
+                'client_secret': self._get_client_secret_for_service(service_name)
+            }
+
+            logger.info("Attempting to refresh token", service=service_name)
+
+            # 发送刷新请求
+            response = requests.post(refresh_url, data=refresh_data)
+
+            if response.status_code == 200:
+                token_response = response.json()
+
+                # 创建新的token信息，保留原有的refresh_token
+                new_token_info = OAuthTokenInfo(
+                    access_token=token_response['access_token'],
+                    refresh_token=token_info.refresh_token,  # 保持原有的refresh_token
+                    expires_in=token_response.get('expires_in'),
+                    token_type=token_response.get('token_type', 'Bearer'),
+                    scope=token_response.get('scope', token_info.scope)
+                )
+
+                # 保存新的token
+                if self.save_token(service_name, new_token_info):
+                    logger.info("Token refreshed successfully",
+                              service=service_name,
+                              expires_at=new_token_info.expires_at.isoformat() if new_token_info.expires_at else None)
+                    return new_token_info
+                else:
+                    logger.error("Failed to save refreshed token", service=service_name)
+                    return None
+            else:
+                logger.error("Token refresh failed",
+                           service=service_name,
+                           status_code=response.status_code,
+                           response=response.text)
+                return None
+
+        except Exception as e:
+            logger.error("Error refreshing token", service=service_name, error=str(e))
+            return None
+
+    def _get_client_id_for_service(self, service_name: str) -> Optional[str]:
+        """获取指定服务的client_id"""
+        # 从Google credentials.json文件获取client_id
+        try:
+            from pathlib import Path
+            import json
+
+            credentials_path = Path.home() / ".personalmanager" / "credentials.json"
+            if credentials_path.exists():
+                with open(credentials_path, 'r', encoding='utf-8') as f:
+                    credentials = json.load(f)
+                    if 'installed' in credentials and 'client_id' in credentials['installed']:
+                        return credentials['installed']['client_id']
+        except Exception as e:
+            logger.error("Error loading client_id from credentials", error=str(e))
+        return None
+
+    def _get_client_secret_for_service(self, service_name: str) -> Optional[str]:
+        """获取指定服务的client_secret"""
+        # 从Google credentials.json文件获取client_secret
+        try:
+            from pathlib import Path
+            import json
+
+            credentials_path = Path.home() / ".personalmanager" / "credentials.json"
+            if credentials_path.exists():
+                with open(credentials_path, 'r', encoding='utf-8') as f:
+                    credentials = json.load(f)
+                    if 'installed' in credentials and 'client_secret' in credentials['installed']:
+                        return credentials['installed']['client_secret']
+        except Exception as e:
+            logger.error("Error loading client_secret from credentials", error=str(e))
+        return None
+
     def list_authorized_services(self) -> Dict[str, Dict[str, Any]]:
         """列出所有已授权的服务"""
         

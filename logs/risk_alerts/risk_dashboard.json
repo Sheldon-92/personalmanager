@@ -1,0 +1,9 @@
+{
+  "total_alerts": 2,
+  "by_severity": {
+    "high": 2
+  },
+  "by_type": {
+    "security": 2
+  }
+}

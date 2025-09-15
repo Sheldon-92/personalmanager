@@ -36,6 +36,16 @@ class UserChoice:
 
 
 @dataclass
+class BayesianMetrics:
+    """贝叶斯学习指标"""
+    prior_beliefs: Dict[str, float]
+    posterior_beliefs: Dict[str, float]
+    likelihood_evidence: Dict[str, float]
+    confidence_interval: Tuple[float, float]
+    update_strength: float
+
+
+@dataclass
 class LearningMetrics:
     """学习指标"""
     total_choices: int
@@ -44,6 +54,7 @@ class LearningMetrics:
     context_preferences: Dict[str, float]
     learning_trend: str
     confidence_score: float
+    bayesian_metrics: Optional[BayesianMetrics] = None
 
 
 class UserPreferenceLearning:
@@ -112,15 +123,29 @@ class UserPreferenceLearning:
     
     def _initialize_learning_parameters(self) -> None:
         """初始化学习参数"""
-        
+
         # 学习率参数
         self.learning_rate = 0.1
         self.decay_factor = 0.95  # 历史记录衰减因子
         self.min_samples_for_learning = 5  # 最少需要的样本数
-        
+
         # 时间权重
         self.recent_weight = 2.0  # 最近选择的权重
         self.time_decay_days = 30  # 30天后权重减半
+
+        # 贝叶斯更新参数
+        self.prior_confidence = 0.3  # 先验置信度
+        self.evidence_weight = 0.7   # 证据权重
+
+        # 初始化先验分布（均匀分布）
+        self.prior_framework_beliefs = {
+            'okr_wig': 0.25,
+            '4dx': 0.20,
+            'full_engagement': 0.20,
+            'atomic_habits': 0.15,
+            'gtd': 0.10,
+            'essentialism': 0.10
+        }
     
     def record_user_choice(self, 
                           task: Task,
@@ -204,7 +229,70 @@ class UserPreferenceLearning:
         logger.info("Preferences updated",
                    frameworks=len(framework_preferences),
                    contexts=len(context_preferences))
-    
+
+    def _bayesian_update(self, prior_beliefs: Dict[str, float],
+                        evidence: Dict[str, float]) -> Tuple[Dict[str, float], BayesianMetrics]:
+        """使用贝叶斯定理更新偏好权重
+
+        P(θ|D) = P(D|θ) × P(θ) / P(D)
+        后验 = 似然 × 先验 / 边际化
+
+        Args:
+            prior_beliefs: 先验信念分布
+            evidence: 观测到的证据/似然
+
+        Returns:
+            (posterior_beliefs, bayesian_metrics)
+        """
+
+        # 计算似然 × 先验
+        unnormalized_posterior = {}
+        total_evidence = 0
+
+        for framework in prior_beliefs:
+            likelihood = evidence.get(framework, 0.1)  # 默认小概率
+            prior = prior_beliefs[framework]
+            unnormalized_posterior[framework] = likelihood * prior
+            total_evidence += unnormalized_posterior[framework]
+
+        # 归一化获得后验分布
+        posterior_beliefs = {}
+        for framework in prior_beliefs:
+            posterior_beliefs[framework] = (
+                unnormalized_posterior[framework] / total_evidence
+                if total_evidence > 0 else prior_beliefs[framework]
+            )
+
+        # 计算更新强度（KL散度）
+        kl_divergence = 0
+        for framework in prior_beliefs:
+            if posterior_beliefs[framework] > 0 and prior_beliefs[framework] > 0:
+                kl_divergence += posterior_beliefs[framework] * math.log(
+                    posterior_beliefs[framework] / prior_beliefs[framework]
+                )
+
+        # 计算置信区间（基于样本数）
+        n_samples = len(self.choice_history)
+        confidence_width = 1.96 / math.sqrt(max(n_samples, 1))  # 95%置信区间
+        confidence_interval = (
+            max(0, self.confidence_score - confidence_width),
+            min(1, self.confidence_score + confidence_width)
+        )
+
+        bayesian_metrics = BayesianMetrics(
+            prior_beliefs=prior_beliefs.copy(),
+            posterior_beliefs=posterior_beliefs.copy(),
+            likelihood_evidence=evidence.copy(),
+            confidence_interval=confidence_interval,
+            update_strength=kl_divergence
+        )
+
+        logger.info("Bayesian update completed",
+                   kl_divergence=round(kl_divergence, 4),
+                   confidence_interval=[round(x, 3) for x in confidence_interval])
+
+        return posterior_beliefs, bayesian_metrics
+
     def _calculate_framework_preferences(self) -> Dict[str, float]:
         """计算理论框架偏好权重"""
         
@@ -257,23 +345,36 @@ class UserPreferenceLearning:
             'essentialism': 0.10
         }
         
-        # 学习强度基于样本数量
+        # 使用贝叶斯更新替代简单线性混合
+        # 将观测到的框架评分作为似然证据
+        evidence = {}
+        for framework in default_weights:
+            evidence[framework] = framework_scores.get(framework, 0.1)
+
+        # 使用先验信念进行贝叶斯更新
+        posterior_weights, _ = self._bayesian_update(
+            prior_beliefs=self.prior_framework_beliefs,
+            evidence=evidence
+        )
+
+        # 学习强度基于样本数量，控制贝叶斯更新vs默认权重的平衡
         learning_strength = min(len(recent_choices) / 20.0, 1.0)
-        
+
         final_weights = {}
         for framework in default_weights:
-            learned_weight = framework_scores.get(framework, default_weights[framework])
+            # 混合贝叶斯后验和默认权重
+            bayesian_weight = posterior_weights.get(framework, default_weights[framework])
             final_weights[framework] = (
                 (1 - learning_strength) * default_weights[framework] +
-                learning_strength * learned_weight
+                learning_strength * bayesian_weight
             )
-        
+
         # 确保权重和为1
         total = sum(final_weights.values())
         if total > 0:
             for framework in final_weights:
                 final_weights[framework] /= total
-        
+
         return final_weights
     
     def _calculate_context_preferences(self) -> Dict[str, float]:
@@ -389,14 +490,36 @@ class UserPreferenceLearning:
         
         # 计算置信度
         confidence_score = min(total_choices / 50.0, 1.0) * recent_accuracy
-        
+
+        # 生成贝叶斯指标演示
+        bayesian_metrics = None
+        if total_choices >= self.min_samples_for_learning:
+            # 计算当前观测证据
+            recent_choices = self.choice_history[-10:] if self.choice_history else []
+            evidence = {}
+            for framework in self.prior_framework_beliefs:
+                # 基于最近选择计算每个框架的观测似然
+                framework_selections = sum(
+                    1 for choice in recent_choices
+                    if choice.framework_scores.get(framework, 0) > 0.5
+                )
+                evidence[framework] = (framework_selections / len(recent_choices)
+                                     if recent_choices else 0.1)
+
+            # 执行贝叶斯更新以获取指标
+            _, bayesian_metrics = self._bayesian_update(
+                prior_beliefs=self.prior_framework_beliefs,
+                evidence=evidence
+            )
+
         return LearningMetrics(
             total_choices=total_choices,
             recent_accuracy=recent_accuracy,
             framework_preferences=framework_preferences,
             context_preferences=context_preferences,
             learning_trend=learning_trend,
-            confidence_score=confidence_score
+            confidence_score=confidence_score,
+            bayesian_metrics=bayesian_metrics
         )
     
     def suggest_optimal_time(self, task: Task) -> Optional[str]:

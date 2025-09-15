@@ -13,6 +13,7 @@ import urllib.parse
 
 from pm.core.config import PMConfig
 from pm.integrations.google_auth import GoogleAuthManager
+from pm.integrations.account_manager import AccountManager
 
 console = Console()
 
@@ -96,8 +97,13 @@ def start_callback_server() -> HTTPServer:
 # 全局GoogleAuthManager实例，确保状态参数一致
 _global_google_auth = None
 
-def google_auth_login(services: Optional[List[str]] = None) -> None:
-    """Google服务登录认证"""
+def google_auth_login(services: Optional[List[str]] = None, account: Optional[str] = None) -> None:
+    """Google服务登录认证
+
+    Args:
+        services: 需要授权的服务列表
+        account: 账号别名，如果为None则使用默认账号
+    """
     global _global_google_auth
     
     config = PMConfig()
@@ -112,9 +118,13 @@ def google_auth_login(services: Optional[List[str]] = None) -> None:
     # 使用全局实例确保状态参数一致性
     _global_google_auth = GoogleAuthManager(config)
     google_auth = _global_google_auth
-    
-    # 检查凭证是否已配置
-    if not google_auth.is_credentials_configured():
+
+    # 如果未指定账号，使用默认账号
+    if account is None:
+        account = google_auth.account_manager.get_default_account()
+
+    # 检查指定账号的凭证是否已配置
+    if not google_auth.is_account_credentials_configured(account):
         console.print(Panel(
             "[red]Google OAuth凭证未配置[/red]\\n\\n"
             "请确保已将Google OAuth凭证文件放置在：\\n"
@@ -136,11 +146,14 @@ def google_auth_login(services: Optional[List[str]] = None) -> None:
         ))
         return
     
-    # 检查是否已经认证
-    if google_auth.is_google_authenticated():
+    # 检查指定账号是否已经认证
+    if google_auth.is_google_authenticated(account):
+        account_info = google_auth.account_manager.get_account_info(account)
+        display_name = account_info.get('display_name', account) if account_info else account
+
         console.print(Panel(
-            "[green]您已经通过Google服务认证。\\n\\n"
-            "如需重新认证，请先运行：[cyan]pm auth logout google[/cyan]",
+            f"[green]账号 '{display_name}' 已通过Google服务认证。\\n\\n"
+            f"如需重新认证，请先运行：[cyan]pm auth logout google --account={account}[/cyan]",
             title="✅ 已认证",
             border_style="green"
         ))
@@ -171,9 +184,9 @@ def google_auth_login(services: Optional[List[str]] = None) -> None:
         # 在后台线程中运行服务器
         server_thread = threading.Thread(target=server.serve_forever, daemon=True)
         server_thread.start()
-        
+
         # 生成认证URL并打开浏览器
-        auth_url, state = google_auth.start_google_auth(services)
+        auth_url, state = google_auth.start_google_auth(services, account_alias=account)
         
         console.print("\\n[green]正在打开浏览器进行认证...[/green]")
         google_auth.open_auth_url_in_browser(auth_url)
@@ -347,4 +360,137 @@ def show_auth_status() -> None:
             "[cyan]pm auth login google[/cyan]",
             title="🔑 认证提示",
             border_style="yellow"
+        ))
+
+
+def add_google_account(alias: str, email: str, display_name: str = None) -> None:
+    """添加新的Google账号
+
+    Args:
+        alias: 账号别名
+        email: 邮箱地址
+        display_name: 显示名称
+    """
+    if display_name is None:
+        display_name = email
+
+    config = PMConfig()
+    account_manager = AccountManager(config)
+
+    # 检查别名是否已存在
+    if account_manager.get_account_info(alias):
+        console.print(Panel(
+            f"[red]账号别名 '{alias}' 已存在[/red]\\n\\n"
+            "请使用不同的别名或先删除现有账号。",
+            title="❌ 别名冲突",
+            border_style="red"
+        ))
+        return
+
+    # 添加账号
+    success = account_manager.add_account(
+        alias=alias,
+        display_name=display_name,
+        email=email
+    )
+
+    if success:
+        console.print(Panel(
+            f"[green]✅ 账号添加成功[/green]\\n\\n"
+            f"别名: [cyan]{alias}[/cyan]\\n"
+            f"邮箱: [cyan]{email}[/cyan]\\n"
+            f"显示名: [cyan]{display_name}[/cyan]\\n\\n"
+            f"接下来请运行：[yellow]pm auth login google --account={alias}[/yellow]",
+            title="🎉 账号添加成功",
+            border_style="green"
+        ))
+    else:
+        console.print(Panel(
+            "[red]❌ 添加账号失败[/red]\\n\\n"
+            "请检查权限或重试。",
+            title="添加失败",
+            border_style="red"
+        ))
+
+
+def list_google_accounts() -> None:
+    """列出所有Google账号"""
+    config = PMConfig()
+    google_auth = GoogleAuthManager(config)
+
+    accounts_status = google_auth.list_account_status()
+    default_account = google_auth.account_manager.get_default_account()
+
+    if not accounts_status:
+        console.print(Panel(
+            "[yellow]未配置任何Google账号[/yellow]\\n\\n"
+            "请使用以下命令添加账号：\\n"
+            "[cyan]pm auth add-account <别名> --email=<邮箱>[/cyan]",
+            title="📋 账号列表",
+            border_style="yellow"
+        ))
+        return
+
+    # 创建账号状态表格
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("别名", style="cyan")
+    table.add_column("邮箱", style="yellow")
+    table.add_column("显示名", style="green")
+    table.add_column("认证状态", justify="center")
+    table.add_column("默认", justify="center")
+
+    for alias, status in accounts_status.items():
+        auth_status = "✅ 已认证" if status['authenticated'] else "❌ 未认证"
+        auth_color = "green" if status['authenticated'] else "red"
+
+        is_default = "🌟" if alias == default_account else ""
+
+        table.add_row(
+            alias,
+            status['email'],
+            status['display_name'],
+            f"[{auth_color}]{auth_status}[/{auth_color}]",
+            is_default
+        )
+
+    console.print(Panel(
+        table,
+        title="📋 Google 账号列表",
+        border_style="blue"
+    ))
+
+
+def switch_default_account(alias: str) -> None:
+    """切换默认账号"""
+    config = PMConfig()
+    account_manager = AccountManager(config)
+
+    # 检查账号是否存在
+    if not account_manager.get_account_info(alias):
+        console.print(Panel(
+            f"[red]账号 '{alias}' 不存在[/red]\\n\\n"
+            "请使用 [cyan]pm auth list-accounts[/cyan] 查看可用账号。",
+            title="❌ 账号不存在",
+            border_style="red"
+        ))
+        return
+
+    success = account_manager.set_default_account(alias)
+
+    if success:
+        account_info = account_manager.get_account_info(alias)
+        display_name = account_info.get('display_name', alias) if account_info else alias
+
+        console.print(Panel(
+            f"[green]✅ 默认账号已切换[/green]\\n\\n"
+            f"新的默认账号: [cyan]{display_name} ({alias})[/cyan]\\n\\n"
+            "现在使用Google服务时将默认使用此账号。",
+            title="🔄 切换成功",
+            border_style="green"
+        ))
+    else:
+        console.print(Panel(
+            "[red]❌ 切换默认账号失败[/red]",
+            title="切换失败",
+            border_style="red"
         ))

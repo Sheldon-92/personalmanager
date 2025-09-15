@@ -22,3 +22,6 @@
 
 ## 验收报告
 - [Sprint 3集成报告](reports/sprint_3/INTEGRATION_REPORT.md) (如存在)
+
+## 差异报告
+- [Phase 3差异分析报告](reports/phase_3/diff.html)

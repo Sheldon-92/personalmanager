@@ -18,7 +18,8 @@ readonly PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Security: Command whitelist
 readonly ALLOWED_COMMANDS=("today" "projects" "capture" "explain" "clarify" "tasks" "inbox" "next" "help" "--help" "--version" "ai")
-readonly AI_SUBCOMMANDS=("route" "query" "suggest" "analyze" "plan")
+# Allowlisted AI subcommands (must align with CLI: src/pm/cli/commands/ai.py)
+readonly AI_SUBCOMMANDS=("route" "config" "status")
 
 # Security: Parameter constraints
 readonly MAX_ARG_LENGTH=1000
@@ -48,7 +49,7 @@ print_warn() {
 }
 
 print_error() {
-    echo -e "${RED}[GEMINI-WRAPPER]${NC} $1"
+    echo -e "${RED}[GEMINI-WRAPPER]${NC} $1" >&2
     log_security_event "ERROR" "$1"
 }
 

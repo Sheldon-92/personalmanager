@@ -1,0 +1,129 @@
+# Dual-Write Configuration for OBS Metric Collection
+# Defines both legacy and standardized metric paths for comparison
+
+api_server:
+  host: "localhost"
+  port: 8001
+  base_path: "/api/v1"
+  health_endpoint: "/health"
+
+collection:
+  # Collection intervals in seconds
+  metrics_interval: 30
+  health_check_interval: 30
+  batch_size: 100
+  max_retry_attempts: 3
+  timeout_seconds: 10
+
+# Output configuration
+output:
+  base_directory: "/Users/sheldonzhao/programs/personal-manager/logs"
+  legacy_format:
+    enabled: true
+    file_pattern: "legacy_metrics_{date}.jsonl"
+    rotation: "daily"
+  standardized_format:
+    enabled: true
+    file_pattern: "standard_metrics_{date}.jsonl"
+    rotation: "daily"
+  comparison_output:
+    enabled: true
+    file_pattern: "metric_comparison_{date}.jsonl"
+    rotation: "daily"
+
+# Metric definitions for dual-write
+metrics:
+  # Legacy metric format (existing)
+  legacy:
+    format: "legacy_v1"
+    namespace: "pm.legacy"
+    fields:
+      - name: "timestamp"
+        type: "datetime"
+        format: "iso8601"
+      - name: "metric_name"
+        type: "string"
+      - name: "value"
+        type: "number"
+      - name: "tags"
+        type: "object"
+      - name: "source"
+        type: "string"
+
+  # Standardized metric format (new)
+  standardized:
+    format: "opentelemetry_v1"
+    namespace: "pm.obs"
+    fields:
+      - name: "timestamp"
+        type: "datetime"
+        format: "unix_nano"
+      - name: "metric_type"
+        type: "string"
+        enum: ["counter", "gauge", "histogram", "summary"]
+      - name: "name"
+        type: "string"
+      - name: "value"
+        type: "number"
+      - name: "unit"
+        type: "string"
+      - name: "labels"
+        type: "object"
+      - name: "metadata"
+        type: "object"
+        fields:
+          - "service_name"
+          - "service_version"
+          - "environment"
+          - "node_id"
+
+# Metric collection endpoints
+endpoints:
+  legacy_metrics: "/metrics/legacy"
+  standard_metrics: "/metrics/standard"
+  health_check: "/health"
+  system_info: "/system/info"
+
+# Comparison settings
+comparison:
+  enabled: true
+  tolerance: 0.001  # Acceptable difference for numeric values
+  ignore_fields:
+    legacy: ["timestamp", "source"]
+    standardized: ["timestamp", "metadata.node_id"]
+  mapping:
+    # Map legacy fields to standardized fields
+    legacy_to_standard:
+      metric_name: "name"
+      value: "value"
+      tags: "labels"
+      timestamp: "timestamp"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "json"
+  file: "/Users/sheldonzhao/programs/personal-manager/logs/dual_write_collector.log"
+  max_size_mb: 100
+  backup_count: 5
+
+# Health probe settings
+health_probe:
+  enabled: true
+  interval_seconds: 30
+  timeout_seconds: 5
+  output_file: "/Users/sheldonzhao/programs/personal-manager/logs/health_probe.jsonl"
+  metrics_file: "/Users/sheldonzhao/programs/personal-manager/logs/health_metrics.jsonl"
+
+# Error handling
+error_handling:
+  max_consecutive_failures: 10
+  failure_backoff_seconds: 60
+  alert_on_failure: true
+  alert_threshold_percentage: 95  # Alert if success rate drops below this
+
+# Data retention
+retention:
+  days: 30
+  cleanup_enabled: true
+  cleanup_schedule: "0 2 * * *"  # Daily at 2 AM

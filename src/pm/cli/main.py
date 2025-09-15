@@ -42,6 +42,12 @@ from pm.cli.commands.review import review_app
 from pm.cli.commands.obsidian import obsidian_app
 from pm.cli.commands.doctor import doctor_app
 from pm.cli.commands.ai import ai_app
+from pm.cli.commands.briefing import (
+    generate_briefing, start_session, refresh_capabilities,
+    show_context_summary, check_session_health, show_session_info, show_capabilities
+)
+from pm.core.interaction_manager import InteractionManager
+from pm.core.command_executor import CommandExecutor
 
 app = typer.Typer(
     name="pm",
@@ -436,6 +442,61 @@ app.add_typer(doctor_app, name="doctor")
 # AI集成命令组 - Sprint 3核心功能，AI服务集成与协议标准化
 app.add_typer(ai_app, name="ai")
 
+
+# 简报和会话管理命令 - 自进化双向简报系统
+@app.command("briefing")
+def briefing(
+    force_refresh: bool = typer.Option(False, "--force-refresh", help="强制刷新所有数据"),
+    claude_context: bool = typer.Option(False, "--claude-context", help="显示Claude技术简报摘要"),
+    quiet: bool = typer.Option(False, "--quiet", help="安静模式，不显示输出")
+) -> None:
+    """生成PersonalManager双向简报（用户工作简报 + Claude技术简报）"""
+    generate_briefing(force_refresh, claude_context, quiet)
+
+
+@app.command("start-session")
+def start_session_cmd(
+    force_refresh: bool = typer.Option(False, "--force-refresh", help="强制刷新功能和数据"),
+    no_briefing: bool = typer.Option(False, "--no-briefing", help="不显示用户简报")
+) -> None:
+    """启动PersonalManager完整会话（推荐的启动方式）"""
+    start_session(force_refresh, no_briefing)
+
+
+# 会话管理命令组
+session_app = typer.Typer(help="PersonalManager会话状态管理")
+app.add_typer(session_app, name="session")
+
+@session_app.command("info")
+def session_info() -> None:
+    """显示当前会话信息"""
+    show_session_info()
+
+@session_app.command("health")
+def session_health() -> None:
+    """检查会话健康状态"""
+    check_session_health()
+
+@session_app.command("context")
+def session_context() -> None:
+    """显示Claude上下文摘要"""
+    show_context_summary()
+
+
+# 功能管理命令组
+capabilities_app = typer.Typer(help="PersonalManager功能发现和管理")
+app.add_typer(capabilities_app, name="capabilities")
+
+@capabilities_app.command("refresh")
+def capabilities_refresh() -> None:
+    """刷新PersonalManager功能注册表"""
+    refresh_capabilities()
+
+@capabilities_app.command("list")
+def capabilities_list() -> None:
+    """显示PersonalManager功能清单"""
+    show_capabilities()
+
 @report_app.command("update")
 def report_update(
     project_name: Optional[str] = typer.Option(None, "--name", "-n", help="项目名称（可选）"),
@@ -510,6 +571,89 @@ def habits_suggest(
     get_suggestions(name)
 
 
+@app.command("interactive")
+def interactive_mode() -> None:
+    """启动交互式模式，支持编号选择和斜杠命令"""
+    config = PMConfig()
+    interaction_manager = InteractionManager(config)
+    command_executor = CommandExecutor()
+
+    console.print(Panel(
+        "[green]🎯 进入PersonalManager交互模式\n\n"
+        "• 输入数字选择操作 (如: 1, 2-4, 1,3)\n"
+        "• 输入 / 查看快捷命令\n"
+        "• 输入 'exit' 退出交互模式",
+        title="🚀 交互模式",
+        border_style="green"
+    ))
+
+    # 显示当前可选操作
+    prompt = interaction_manager.get_interactive_prompt()
+    console.print(prompt)
+
+    while True:
+        try:
+            user_input = input("\n💬 请选择操作: ").strip()
+
+            if user_input.lower() in ['exit', 'quit', 'q']:
+                console.print("👋 退出交互模式")
+                break
+
+            if not user_input:
+                continue
+
+            # 处理用户输入
+            result = interaction_manager.process_user_input(user_input)
+
+            if result['type'] == 'slash_command':
+                if user_input == '/':
+                    # 显示斜杠命令帮助
+                    help_text = interaction_manager.format_slash_help()
+                    console.print(help_text)
+                else:
+                    console.print(f"🔄 执行命令: {user_input}")
+                    exec_result = command_executor.execute_slash_command(user_input)
+
+                    if exec_result['success']:
+                        if exec_result.get('stdout'):
+                            console.print(exec_result['stdout'])
+                    else:
+                        console.print(f"❌ 命令执行失败: {exec_result.get('error', '未知错误')}")
+
+            elif result['type'] == 'number_choice':
+                if result['commands']:
+                    for cmd in result['commands']:
+                        console.print(f"🔄 执行: {cmd}")
+
+                        if cmd.startswith('/'):
+                            exec_result = command_executor.execute_slash_command(cmd)
+                        else:
+                            exec_result = command_executor.execute_pm_command(cmd)
+
+                        if exec_result['success']:
+                            if exec_result.get('stdout'):
+                                console.print(exec_result['stdout'])
+                        else:
+                            console.print(f"❌ 命令执行失败: {exec_result.get('error', '未知错误')}")
+                else:
+                    console.print(f"❌ 无效的选项编号: {', '.join(map(str, result['numbers']))}")
+
+            elif result['type'] == 'regular_text':
+                console.print(f"💭 自然语言输入: {user_input}")
+                console.print("🤖 (暂不支持自然语言处理，请使用编号或斜杠命令)")
+
+            # 刷新选项显示
+            if result['type'] in ['number_choice', 'slash_command'] and user_input != '/':
+                prompt = interaction_manager.get_interactive_prompt()
+                console.print("\n" + prompt)
+
+        except KeyboardInterrupt:
+            console.print("\n👋 退出交互模式")
+            break
+        except Exception as e:
+            console.print(f"❌ 错误: {str(e)}")
+
+
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -520,7 +664,7 @@ def main(
         from pm import __version__
         console.print(f"PersonalManager Agent v{__version__}")
         return
-    
+
     if ctx.invoked_subcommand is None:
         # 检查是否已初始化
         config = PMConfig()
@@ -528,21 +672,28 @@ def main(
             console.print(Panel(
                 "[yellow]👋 欢迎使用 PersonalManager Agent！\n\n"
                 "看起来这是您第一次使用。请先运行设置向导：\n"
-                "[cyan]/pm setup[/cyan]",
+                "[cyan]pm setup[/cyan]",
                 title="🚀 欢迎",
                 border_style="blue"
             ))
         else:
+            # 启动交互模式而不是显示静态帮助
+            config = PMConfig()
+            interaction_manager = InteractionManager(config)
+
+            # 显示简洁的欢迎信息
             console.print(Panel(
-                "[green]PersonalManager Agent 已就绪！\n\n"
-                "常用命令：\n"
-                "• [cyan]pm help[/cyan] - 查看所有可用命令\n"
-                "• [cyan]pm today[/cyan] - 获取今日任务建议\n"
-                "• [cyan]pm capture[/cyan] - 快速捕获新任务\n"
-                "• [cyan]pm projects overview[/cyan] - 查看项目概览",
+                "[green]🎯 PersonalManager Agent 交互模式\n\n"
+                "• 输入数字选择操作\n"
+                "• 输入 / 查看快捷命令\n"
+                "• 'pm help' 查看完整命令",
                 title="📋 PersonalManager",
                 border_style="green"
             ))
+
+            # 显示当前可选操作
+            prompt = interaction_manager.get_interactive_prompt()
+            console.print(prompt)
 
 
 if __name__ == "__main__":

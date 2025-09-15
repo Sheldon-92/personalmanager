@@ -1,0 +1,14 @@
+#!/bin/bash
+# Gmail专用命令 - 自动切换到Gmail账号
+
+# 切换到Gmail账号
+python3 ~/programs/personal-manager/scripts/multi_account_auth.py switch gmail 2>/dev/null
+
+# 执行Gmail相关命令
+if [ $# -eq 0 ]; then
+    # 如果没有参数，显示Gmail扫描
+    ./bin/pm-local gmail scan
+else
+    # 如果有参数，传递给gmail命令
+    ./bin/pm-local gmail "$@"
+fi

@@ -1,0 +1,751 @@
+openapi: 3.0.3
+info:
+  title: PersonalManager Local API
+  description: |
+    Local read-only REST API for PersonalManager system providing access to tasks,
+    projects, reports and system metrics. This API follows PersonalManager's
+    standardized JSON output format and provides RBAC-compliant read-only access.
+  version: 0.1.0
+  contact:
+    name: PersonalManager Team
+    email: noreply@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+security: []
+
+paths:
+  /:
+    get:
+      summary: API Information
+      description: Returns basic API information and available endpoints
+      operationId: getApiInfo
+      tags:
+        - Info
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "PersonalManager API"
+                  version:
+                    type: string
+                    example: "0.1.0"
+                  description:
+                    type: string
+                  endpoints:
+                    type: object
+                  documentation:
+                    type: string
+
+  /health:
+    get:
+      summary: Health Check
+      description: Simple health check endpoint
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "0.1.0"
+
+  /api/v1/status:
+    get:
+      summary: System Status
+      description: Get comprehensive system status including services and configuration
+      operationId: getSystemStatus
+      tags:
+        - System
+      responses:
+        '200':
+          description: System status information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          system:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                example: "PersonalManager"
+                              version:
+                                type: string
+                                example: "0.1.0"
+                              status:
+                                type: string
+                                enum: [running, stopped, error]
+                              uptime:
+                                type: number
+                                description: Uptime in seconds
+                          services:
+                            type: object
+                            properties:
+                              storage:
+                                type: object
+                                properties:
+                                  status:
+                                    type: string
+                                    enum: [available, unavailable]
+                                  location:
+                                    type: string
+                              ai:
+                                type: object
+                                properties:
+                                  claude:
+                                    $ref: '#/components/schemas/AIServiceStatus'
+                                  gemini:
+                                    $ref: '#/components/schemas/AIServiceStatus'
+                          endpoints:
+                            type: object
+                            properties:
+                              available:
+                                type: array
+                                items:
+                                  type: string
+                              read_only:
+                                type: boolean
+                              authentication:
+                                type: string
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/tasks:
+    get:
+      summary: List Tasks
+      description: Get list of tasks with optional filtering
+      operationId: getTasks
+      tags:
+        - Tasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter tasks by status
+          required: false
+          schema:
+            type: string
+            enum: [inbox, next_action, project, waiting_for, someday_maybe, reference, completed, deleted]
+        - name: priority
+          in: query
+          description: Filter tasks by priority
+          required: false
+          schema:
+            type: string
+            enum: [high, medium, low]
+        - name: context
+          in: query
+          description: Filter tasks by context
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          tasks:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Task'
+                          summary:
+                            $ref: '#/components/schemas/TaskSummary'
+                          filters_applied:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                nullable: true
+                              priority:
+                                type: string
+                                nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/projects:
+    get:
+      summary: List Projects
+      description: Get list of projects with optional filtering
+      operationId: getProjects
+      tags:
+        - Projects
+      parameters:
+        - name: status
+          in: query
+          description: Filter projects by status
+          required: false
+          schema:
+            type: string
+            enum: [active, completed, planning, on_hold, cancelled]
+        - name: priority
+          in: query
+          description: Filter projects by priority
+          required: false
+          schema:
+            type: string
+            enum: [high, medium, low]
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          projects:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Project'
+                          summary:
+                            $ref: '#/components/schemas/ProjectSummary'
+                          filters_applied:
+                            type: object
+                            properties:
+                              status:
+                                type: string
+                                nullable: true
+                              priority:
+                                type: string
+                                nullable: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/reports/{type}:
+    get:
+      summary: Get Report
+      description: Retrieve specific type of report
+      operationId: getReport
+      tags:
+        - Reports
+      parameters:
+        - name: type
+          in: path
+          description: Type of report to retrieve
+          required: true
+          schema:
+            type: string
+            enum: [status, progress, performance, summary]
+      responses:
+        '200':
+          description: Report data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          report:
+                            $ref: '#/components/schemas/Report'
+                          metadata:
+                            type: object
+                            properties:
+                              requested_type:
+                                type: string
+                              available_types:
+                                type: array
+                                items:
+                                  type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/metrics:
+    get:
+      summary: System Metrics
+      description: Get system performance metrics and statistics
+      operationId: getMetrics
+      tags:
+        - Metrics
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          system_metrics:
+                            $ref: '#/components/schemas/SystemMetrics'
+                          api_metrics:
+                            $ref: '#/components/schemas/APIMetrics'
+                          application_metrics:
+                            $ref: '#/components/schemas/ApplicationMetrics'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  schemas:
+    APIResponse:
+      type: object
+      description: Standard API response format following PersonalManager JSON protocol
+      required:
+        - status
+        - command
+        - timestamp
+        - data
+        - error
+        - metadata
+      properties:
+        status:
+          type: string
+          enum: [success, failed, warning]
+          description: Response status
+        command:
+          type: string
+          description: Command or operation identifier
+          example: "api.tasks"
+        timestamp:
+          type: string
+          format: date-time
+          description: Response timestamp in ISO-8601 format
+        data:
+          oneOf:
+            - type: object
+            - type: 'null'
+          description: Response data or null on error
+        error:
+          oneOf:
+            - $ref: '#/components/schemas/APIError'
+            - type: 'null'
+          description: Error information or null on success
+        metadata:
+          type: object
+          required:
+            - version
+            - execution_time
+          properties:
+            version:
+              type: string
+              example: "0.1.0"
+            execution_time:
+              type: number
+              description: Execution time in seconds
+
+    APIError:
+      type: object
+      required:
+        - code
+        - message
+        - details
+      properties:
+        code:
+          type: string
+          enum:
+            - CONFIG_ERROR
+            - API_KEY_MISSING
+            - NETWORK_ERROR
+            - AUTH_FAILED
+            - INVALID_INPUT
+            - PERMISSION_DENIED
+            - NOT_FOUND
+            - INTERNAL_ERROR
+            - INVALID_REPORT_TYPE
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - priority
+        - context
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique task identifier
+          example: "task-001"
+        title:
+          type: string
+          description: Task title
+          example: "Complete API documentation"
+        description:
+          type: string
+          description: Detailed task description
+        status:
+          type: string
+          enum: [inbox, next_action, project, waiting_for, someday_maybe, reference, completed, deleted]
+          description: Current task status
+        priority:
+          type: string
+          enum: [high, medium, low]
+          description: Task priority level
+        context:
+          type: string
+          description: Task context or category
+          example: "development"
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Task last update timestamp
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Task due date
+        tags:
+          type: array
+          items:
+            type: string
+          description: Task tags
+        project_id:
+          type: string
+          nullable: true
+          description: Associated project ID
+
+    TaskSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of tasks
+        by_status:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Task count by status
+        by_priority:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Task count by priority
+        by_context:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Task count by context
+
+    Project:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - priority
+        - health
+        - progress
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique project identifier
+          example: "project-001"
+        name:
+          type: string
+          description: Project name
+          example: "API Development"
+        description:
+          type: string
+          description: Project description
+        status:
+          type: string
+          enum: [active, completed, planning, on_hold, cancelled]
+          description: Project status
+        priority:
+          type: string
+          enum: [high, medium, low]
+          description: Project priority
+        health:
+          type: string
+          enum: [excellent, good, warning, critical, unknown]
+          description: Project health status
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Project completion percentage
+        created_at:
+          type: string
+          format: date-time
+          description: Project creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Project last update timestamp
+        due_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Project due date
+        tags:
+          type: array
+          items:
+            type: string
+          description: Project tags
+        task_count:
+          type: integer
+          description: Total tasks in project
+        completed_tasks:
+          type: integer
+          description: Completed tasks in project
+        owner:
+          type: string
+          description: Project owner
+
+    ProjectSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total number of projects
+        active:
+          type: integer
+          description: Number of active projects
+        completed:
+          type: integer
+          description: Number of completed projects
+        planning:
+          type: integer
+          description: Number of projects in planning
+        average_progress:
+          type: number
+          description: Average completion percentage
+
+    Report:
+      type: object
+      required:
+        - report_type
+        - generated_at
+        - period
+        - data
+      properties:
+        report_type:
+          type: string
+          enum: [status, progress, performance, summary]
+          description: Type of report
+        generated_at:
+          type: string
+          format: date-time
+          description: Report generation timestamp
+        period:
+          type: string
+          description: Report time period
+          example: "weekly"
+        data:
+          type: object
+          description: Report-specific data
+
+    AIServiceStatus:
+      type: object
+      required:
+        - configured
+        - status
+      properties:
+        configured:
+          type: boolean
+          description: Whether service is configured
+        status:
+          type: string
+          enum: [configured, not configured, error]
+          description: Service status
+
+    SystemMetrics:
+      type: object
+      properties:
+        cpu_usage_percent:
+          type: number
+          description: CPU usage percentage
+        memory_usage_percent:
+          type: number
+          description: Memory usage percentage
+        memory_available_mb:
+          type: number
+          description: Available memory in MB
+        disk_usage_percent:
+          type: number
+          description: Disk usage percentage
+        disk_available_gb:
+          type: number
+          description: Available disk space in GB
+        platform:
+          type: string
+          description: Operating system platform
+        python_version:
+          type: string
+          description: Python version
+
+    APIMetrics:
+      type: object
+      properties:
+        uptime_seconds:
+          type: number
+          description: API server uptime in seconds
+        requests_served:
+          type: integer
+          description: Total requests served
+        endpoints_available:
+          type: integer
+          description: Number of available endpoints
+        average_response_time_ms:
+          type: number
+          description: Average response time in milliseconds
+
+    ApplicationMetrics:
+      type: object
+      properties:
+        tasks_in_system:
+          type: integer
+          description: Total tasks in system
+        projects_in_system:
+          type: integer
+          description: Total projects in system
+        storage_size_mb:
+          type: number
+          description: Storage size in MB
+        last_backup:
+          type: string
+          format: date-time
+          description: Last backup timestamp
+        data_integrity_status:
+          type: string
+          enum: [good, warning, error]
+          description: Data integrity status
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  status:
+                    example: "failed"
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "INVALID_INPUT"
+                      message:
+                        example: "Invalid input parameters"
+
+    NotFound:
+      description: Resource Not Found
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  status:
+                    example: "failed"
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "NOT_FOUND"
+                      message:
+                        example: "Resource not found"
+
+    InternalError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/APIResponse'
+              - type: object
+                properties:
+                  status:
+                    example: "failed"
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        example: "INTERNAL_ERROR"
+                      message:
+                        example: "Internal server error occurred"
+
+tags:
+  - name: Info
+    description: API information and documentation
+  - name: Health
+    description: Health check endpoints
+  - name: System
+    description: System status and configuration
+  - name: Tasks
+    description: Task management operations (read-only)
+  - name: Projects
+    description: Project management operations (read-only)
+  - name: Reports
+    description: Report generation and retrieval
+  - name: Metrics
+    description: System performance metrics
+
+externalDocs:
+  description: PersonalManager Documentation
+  url: https://github.com/personalmanager/docs

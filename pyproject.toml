@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "personal-manager"
-version = "0.1.0"
+version = "0.4.0-rc1"
 description = "PersonalManager Agent - AI-driven personal management system based on BMAD framework"
 authors = ["PersonalManager Team <noreply@example.com>"]
 readme = "README.md"

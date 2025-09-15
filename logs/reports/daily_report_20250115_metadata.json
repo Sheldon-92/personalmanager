@@ -1,0 +1,16 @@
+{
+  "report_id": "daily_report_20250115",
+  "generated_at": "2025-01-15T10:00:00Z",
+  "type": "daily",
+  "format": "pdf",
+  "size_bytes": 1234567,
+  "path": "/tmp/daily_report.pdf",
+  "recipients_count": 2,
+  "custom_metadata": {
+    "author": "pm_system",
+    "tags": [
+      "daily",
+      "summary"
+    ]
+  }
+}

@@ -52,3 +52,4 @@ test_minimal_auth.py
 npm/**/node_modules/
 npm/**/dist/
 npm/**/*.tgz
+Personal Manager Test/

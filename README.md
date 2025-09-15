@@ -143,3 +143,14 @@ PersonalManager 专为与 AI Agent（如 Claude、Gemini CLI）协作而设计�
 查看详细的版本更新历史和功能变更，请参阅 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
+
+## 文档与流程规范
+
+- 产品角色与职责（PO Persona）: docs/prompts/po_persona_and_responsibilities.md
+- 产品负责人工作流程（PO Playbook）: docs/prompts/po_operational_playbook.md
+- Phase 5 RC 专项修复计划: docs/phase_5_rc_fix_plan.md
+- RC 用户快速试用指南: docs/quickstart_rc_user_testing.md
+- 用户试用反馈模板: docs/USER_FEEDBACK_TEMPLATE.md
+  
+
+---

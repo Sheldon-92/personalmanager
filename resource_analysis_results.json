@@ -1,0 +1,165 @@
+{
+  "test_timestamp": "2025-09-14T20:37:33.590542",
+  "recovery_assessment": {
+    "overall_pass": false,
+    "tolerance_criteria": "\u00b12.0%",
+    "total_resources_tested": 4,
+    "resources_within_tolerance": 3,
+    "resources_outside_tolerance": 1
+  },
+  "resource_details": [
+    {
+      "resource": "Memory Mb",
+      "baseline": "34.58 MB",
+      "peak": "39.77 MB",
+      "recovery": "30.48 MB",
+      "change_percent": "-11.86%",
+      "within_tolerance": "FAIL",
+      "status": "\u2717"
+    },
+    {
+      "resource": "Threads",
+      "baseline": "8.00 count",
+      "peak": "8.00 count",
+      "recovery": "8.00 count",
+      "change_percent": "+0.00%",
+      "within_tolerance": "PASS",
+      "status": "\u2713"
+    },
+    {
+      "resource": "File Descriptors",
+      "baseline": "7.00 count",
+      "peak": "7.00 count",
+      "recovery": "7.00 count",
+      "change_percent": "+0.00%",
+      "within_tolerance": "PASS",
+      "status": "\u2713"
+    },
+    {
+      "resource": "Network Connections",
+      "baseline": "0.00 count",
+      "peak": "0.00 count",
+      "recovery": "0.00 count",
+      "change_percent": "+0.00%",
+      "within_tolerance": "PASS",
+      "status": "\u2713"
+    }
+  ],
+  "performance_summary": {
+    "load_operations": {
+      "p95_latency_ms": 14.38,
+      "p99_latency_ms": 16.58,
+      "target_p95_ms": 300.0,
+      "target_p99_ms": 500.0,
+      "p95_pass": true,
+      "p99_pass": true
+    },
+    "unload_operations": {
+      "p95_latency_ms": 8.09,
+      "p99_latency_ms": 22.25,
+      "target_p95_ms": 200.0,
+      "target_p99_ms": 400.0,
+      "p95_pass": true,
+      "p99_pass": true
+    },
+    "success_rate": "100.0%",
+    "success_rate_pass": true
+  },
+  "key_insights": [
+    "\u2717 1 resources outside tolerance",
+    "\u2713 Memory usage decreased by 11.9% - effective garbage collection",
+    "\u2713 Thread count unchanged - proper thread lifecycle management",
+    "\u2713 File descriptors unchanged - no file handle leaks",
+    "\u2713 Excellent load performance: P95=14.4ms",
+    "\u2713 Excellent unload performance: P95=8.1ms",
+    "\u2713 100% success rate - robust plugin operations"
+  ],
+  "visualization_data": {
+    "resource_comparison": [
+      {
+        "Resource": "Memory Mb",
+        "Baseline": 34.58,
+        "Recovery": 30.48,
+        "Change_%": -11.85656448814343,
+        "Status": "Outside Tolerance"
+      },
+      {
+        "Resource": "Threads",
+        "Baseline": 8,
+        "Recovery": 8,
+        "Change_%": 0.0,
+        "Status": "Within Tolerance"
+      },
+      {
+        "Resource": "File Descriptors",
+        "Baseline": 7,
+        "Recovery": 7,
+        "Change_%": 0.0,
+        "Status": "Within Tolerance"
+      },
+      {
+        "Resource": "Network Connections",
+        "Baseline": 0,
+        "Recovery": 0,
+        "Change_%": 0.0,
+        "Status": "Within Tolerance"
+      }
+    ],
+    "performance_table": [
+      {
+        "Operation": "Load",
+        "Metric": "P95 Latency",
+        "Value_ms": 14.38,
+        "Target_ms": 300.0,
+        "Status": "PASS"
+      },
+      {
+        "Operation": "Load",
+        "Metric": "P99 Latency",
+        "Value_ms": 16.58,
+        "Target_ms": 500.0,
+        "Status": "PASS"
+      },
+      {
+        "Operation": "Unload",
+        "Metric": "P95 Latency",
+        "Value_ms": 8.09,
+        "Target_ms": 200.0,
+        "Status": "PASS"
+      },
+      {
+        "Operation": "Unload",
+        "Metric": "P99 Latency",
+        "Value_ms": 22.25,
+        "Target_ms": 400.0,
+        "Status": "PASS"
+      }
+    ],
+    "chart_data": {
+      "resource_names": [
+        "Memory Mb",
+        "Threads",
+        "File Descriptors",
+        "Network Connections"
+      ],
+      "baseline_values": [
+        34.58,
+        8,
+        7,
+        0
+      ],
+      "recovery_values": [
+        30.48,
+        8,
+        7,
+        0
+      ],
+      "change_percentages": [
+        -11.85656448814343,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

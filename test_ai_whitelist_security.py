@@ -106,7 +106,7 @@ def test_ai_whitelist_security():
 
 
 def test_wrapper_parameter_limits():
-    """Test that wrapper enforces parameter length limits."""
+    """Test that wrapper enforces parameter length limits (1000 chars max)."""
 
     project_root = Path(__file__).parent
     wrapper_path = project_root / ".gemini" / "pm-wrapper.sh"
@@ -115,10 +115,29 @@ def test_wrapper_parameter_limits():
         print(f"❌ Wrapper not found at {wrapper_path}")
         return False
 
-    print("\nTesting parameter length limits...")
+    print("\nTesting parameter length limits (1000 chars max)...")
 
-    # Create a very long parameter (should be truncated at 200 chars)
-    long_param = "A" * 300
+    # Test 1: Parameter within limit (should succeed)
+    normal_param = "A" * 999
+
+    try:
+        result = subprocess.run(
+            [str(wrapper_path), "capture", normal_param],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(project_root)
+        )
+
+        if "parameter too long" in result.stderr.lower():
+            print(f"  ❌ Normal parameter (999 chars) incorrectly blocked")
+            return False
+    except Exception as e:
+        print(f"  ❌ Exception with normal parameter: {e}")
+        return False
+
+    # Test 2: Parameter exceeding limit (should be blocked)
+    long_param = "A" * 1001
 
     try:
         result = subprocess.run(
@@ -129,12 +148,13 @@ def test_wrapper_parameter_limits():
             cwd=str(project_root)
         )
 
-        # The wrapper should truncate but still execute
-        if result.returncode == 0 or "pm-local capture" in result.stderr:
-            print(f"  ✅ Long parameters are properly handled (truncated)")
+        # The wrapper should block parameters over 1000 chars
+        if "parameter too long" in result.stderr.lower():
+            print(f"  ✅ Long parameters (>1000 chars) are properly blocked")
             return True
         else:
-            print(f"  ❌ Long parameter handling failed")
+            print(f"  ❌ Long parameter not properly blocked")
+            print(f"      Stderr: {result.stderr[:200]}")
             return False
 
     except Exception as e:
