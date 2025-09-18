@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "personal-manager"
-version = "0.4.0-rc1"
+version = "0.5.0"
 description = "PersonalManager Agent - AI-driven personal management system based on BMAD framework"
 authors = ["PersonalManager Team <noreply@example.com>"]
 readme = "README.md"
@@ -23,6 +23,11 @@ google-generativeai = "^0.3.0"
 # 监控与日志
 structlog = "^23.1.0"
 watchdog = "^3.0.0"
+google-api-python-client = "^2.181.0"
+numpy = "<2.0.0"
+pandas = "^2.3.2"
+scipy = "<1.10"
+scikit-learn = "<1.2"
 
 [tool.poetry.group.dev.dependencies]
 # 代码质量
@@ -36,6 +41,9 @@ pytest = "^7.4.2"
 pytest-cov = "^4.1.0"
 pytest-asyncio = "^0.21.1"
 factory-boy = "^3.3.0"
+# 测试依赖
+psutil = "^5.9.5"
+jsonschema = "^4.17.3"
 
 [tool.poetry.scripts]
 pm = "pm.cli.main:app"
