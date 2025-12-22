@@ -35,7 +35,211 @@ This document defines the standardized JSON output format for PersonalManager CL
 
 ## Command-Specific Formats
 
-### 1. AI Route Command
+### 1. Budget Commands
+
+#### Budget Status Command
+
+```bash
+pm budget status --json [project_name]
+```
+
+**Success Response (Single Project):**
+```json
+{
+  "status": "success",
+  "command": "budget.status",
+  "timestamp": "2025-09-18T10:30:00Z",
+  "data": {
+    "project": "PersonalManager",
+    "has_budget": true,
+    "weekly": {
+      "budget": 1200,
+      "consumed": 480,
+      "percentage": 40.0,
+      "remaining": 720
+    },
+    "monthly": {
+      "budget": 4800,
+      "consumed": 1920,
+      "percentage": 40.0,
+      "remaining": 2880
+    },
+    "alert_level": "ok"
+  },
+  "error": null,
+  "metadata": {
+    "version": "0.5.0",
+    "execution_time": 0.123
+  }
+}
+```
+
+**Success Response (All Projects):**
+```json
+{
+  "status": "success",
+  "command": "budget.status",
+  "timestamp": "2025-09-18T10:30:00Z",
+  "data": {
+    "projects": [
+      {
+        "project_name": "PersonalManager",
+        "weekly_budget": 1200,
+        "weekly_consumed": 480,
+        "weekly_percentage": 40.0,
+        "monthly_budget": 4800,
+        "monthly_consumed": 1920,
+        "monthly_percentage": 40.0,
+        "alert_level": "ok",
+        "burn_rate": 2.5
+      }
+    ],
+    "total_projects": 1
+  },
+  "error": null,
+  "metadata": {
+    "version": "0.5.0",
+    "execution_time": 0.089
+  }
+}
+```
+
+#### Budget Forecast Command
+
+```bash
+pm budget forecast --json project_name
+```
+
+**Success Response:**
+```json
+{
+  "status": "success",
+  "command": "budget.forecast",
+  "timestamp": "2025-09-18T10:30:00Z",
+  "data": {
+    "project": "PersonalManager",
+    "has_budget": true,
+    "current_burn_rate": 2.5,
+    "current_burn_rate_display": "2.5h/day",
+    "projections": {
+      "weekly": {
+        "projected": 1050,
+        "budget": 1200,
+        "projected_display": "17.5h"
+      },
+      "monthly": {
+        "projected": 4500,
+        "budget": 4800,
+        "projected_display": "75.0h"
+      }
+    },
+    "days_until_exhausted": 15,
+    "exhaustion_status": "15 days",
+    "recommendation": "Current pace is sustainable. Consider allocating more time if project scope increases.",
+    "alert_level": "ok"
+  },
+  "error": null,
+  "metadata": {
+    "version": "0.5.0",
+    "execution_time": 0.234
+  }
+}
+```
+
+### 2. Session Commands
+
+#### Session List Command
+
+```bash
+pm session list --json [--active] [--today] [--temp] [--limit 10]
+```
+
+**Success Response:**
+```json
+{
+  "status": "success",
+  "command": "session.list",
+  "timestamp": "2025-09-18T10:30:00Z",
+  "data": {
+    "sessions": [
+      {
+        "id": "sess_abc123def456",
+        "project_id": "proj_xyz789",
+        "project_name": "PersonalManager",
+        "is_temporary": false,
+        "description": "Implementing CLI contract coverage",
+        "status": "active",
+        "duration_seconds": 3600,
+        "duration_display": "1:00:00",
+        "start_time": "2025-09-18T09:30:00",
+        "start_time_display": "09:30",
+        "focus_mode": "deep_work",
+        "notes": "Making good progress on JSON output"
+      }
+    ],
+    "total": 1,
+    "filters": {
+      "active": true,
+      "today": false,
+      "temp": false,
+      "limit": 10
+    }
+  },
+  "error": null,
+  "metadata": {
+    "version": "0.5.0",
+    "execution_time": 0.156
+  }
+}
+```
+
+### 3. Project Commands
+
+#### Project List Command
+
+```bash
+pm project list --json [--all] [--type type] [--status status]
+```
+
+**Success Response:**
+```json
+{
+  "status": "success",
+  "command": "project.list",
+  "timestamp": "2025-09-18T10:30:00Z",
+  "data": {
+    "projects": [
+      {
+        "id": "proj_abc123",
+        "name": "PersonalManager",
+        "type": "iterative",
+        "status": "active",
+        "priority": "high",
+        "directory": "/Users/user/projects/personal-manager",
+        "time_budget_weekly": 1200,
+        "time_budget_display": "1200m",
+        "deadline": "2025-12-31",
+        "deadline_display": "2025-12-31",
+        "created_at": "2025-09-01T00:00:00Z",
+        "updated_at": "2025-09-18T10:00:00Z"
+      }
+    ],
+    "total": 1,
+    "filters": {
+      "all_projects": false,
+      "project_type": null,
+      "status": "active"
+    }
+  },
+  "error": null,
+  "metadata": {
+    "version": "0.5.0",
+    "execution_time": 0.078
+  }
+}
+```
+
+### 4. AI Route Command
 
 ```bash
 pm ai route --json "query text"
@@ -339,6 +543,11 @@ For commands being updated to the new format:
 ## Version History
 
 - **v0.1.0** (2025-09-14): Initial specification
+- **v0.5.0** (2025-09-18): Added comprehensive contract coverage
+  - Budget commands: `status` and `forecast` with JSON support
+  - Session commands: `list` with JSON support
+  - Project commands: `list` with JSON support
+  - Shared contract utilities in `pm.cli.contracts`
 - Sprint 3: Standardized across all commands
 
 ---

@@ -12,8 +12,18 @@ import structlog
 from pm.core.config import PMConfig
 from pm.models.task import Task, TaskStatus, TaskContext, TaskPriority, EnergyLevel
 from .google_auth import GoogleAuthManager
+from enum import Enum
+from pm.storage.daily_task_tracker import DailyTaskTracker
+from datetime import date
 
 logger = structlog.get_logger()
+
+
+class TaskCategory(Enum):
+    """任务分类枚举"""
+    HABIT = "habit"      # 习惯
+    EVENT = "event"      # 日程/事件
+    TASK = "task"        # 普通任务
 
 
 class GoogleTask:
@@ -50,27 +60,86 @@ class GoogleTask:
         if not self.due:
             return False
         return datetime.now() > self.due and not self.is_completed
+
+    def get_task_category(self) -> TaskCategory:
+        """识别任务分类（基于前缀）"""
+        title_lower = self.title.lower()
+
+        # 检查习惯前缀
+        habit_prefixes = ['[habit]', '习惯:', 'habit:', '[习惯]']
+        for prefix in habit_prefixes:
+            if title_lower.startswith(prefix.lower()):
+                return TaskCategory.HABIT
+
+        # 检查日程/事件前缀
+        event_prefixes = ['[event]', '日程:', 'event:', '[日程]', '事件:', '[事件]']
+        for prefix in event_prefixes:
+            if title_lower.startswith(prefix.lower()):
+                return TaskCategory.EVENT
+
+        # 检查任务前缀或默认
+        task_prefixes = ['[task]', '任务:', 'task:', '[任务]']
+        for prefix in task_prefixes:
+            if title_lower.startswith(prefix.lower()):
+                return TaskCategory.TASK
+
+        # 默认为普通任务
+        return TaskCategory.TASK
+
+    def get_clean_title(self) -> str:
+        """获取去除前缀的标题"""
+        # 定义所有前缀
+        all_prefixes = [
+            '[habit]', '习惯:', 'habit:', '[习惯]',
+            '[event]', '日程:', 'event:', '[日程]', '事件:', '[事件]',
+            '[task]', '任务:', 'task:', '[任务]'
+        ]
+
+        clean_title = self.title
+        title_lower = self.title.lower()
+
+        # 去除前缀
+        for prefix in all_prefixes:
+            if title_lower.startswith(prefix.lower()):
+                clean_title = self.title[len(prefix):].strip()
+                break
+
+        return clean_title
     
     def to_gtd_task(self) -> Task:
         """转换为GTD任务"""
-        
+
         # 根据任务内容推断上下文
         context = self._infer_context()
-        
+
         # 根据截止时间推断优先级
         priority = self._infer_priority()
-        
+
         # 根据任务复杂度推断所需精力
         energy = self._infer_energy_level()
-        
+
         # 转换状态
         if self.is_completed:
             gtd_status = TaskStatus.COMPLETED
         else:
             gtd_status = TaskStatus.NEXT_ACTION
-        
+
+        # 获取任务分类
+        category = self.get_task_category()
+
+        # 使用清理后的标题，但保留分类信息
+        clean_title = self.get_clean_title()
+
+        # 根据分类添加不同的表情前缀
+        if category == TaskCategory.HABIT:
+            title_with_emoji = f"🎯 {clean_title}"
+        elif category == TaskCategory.EVENT:
+            title_with_emoji = f"📅 {clean_title}"
+        else:
+            title_with_emoji = f"📝 {clean_title}"
+
         task = Task(
-            title=f"📝 {self.title}",
+            title=title_with_emoji,
             description=self._generate_description(),
             status=gtd_status,
             context=context,
@@ -79,9 +148,10 @@ class GoogleTask:
             due_date=self.due,
             completed_at=self.completed,
             source="google_tasks",
-            source_id=self.task_id
+            source_id=self.task_id,
+            tags=[f"category:{category.value}"]  # 添加分类标签
         )
-        
+
         return task
     
     def _infer_context(self) -> TaskContext:
@@ -111,13 +181,21 @@ class GoogleTask:
     
     def _infer_priority(self) -> TaskPriority:
         """根据截止时间推断优先级"""
-        
+
         if not self.due:
             return TaskPriority.MEDIUM
-        
-        time_until_due = (self.due - datetime.now()).total_seconds()
+
+        # 确保时间对象都有时区信息
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        if self.due.tzinfo is None:
+            due_date = self.due.replace(tzinfo=timezone.utc)
+        else:
+            due_date = self.due
+
+        time_until_due = (due_date - now).total_seconds()
         hours_until = time_until_due / 3600
-        
+
         if hours_until <= 6:
             return TaskPriority.HIGH
         elif hours_until <= 48:
@@ -211,7 +289,8 @@ class GoogleTasksIntegration:
     def __init__(self, config: PMConfig):
         self.config = config
         self.google_auth = GoogleAuthManager(config)
-        
+        self.task_tracker = DailyTaskTracker()
+
         logger.info("Google Tasks integration initialized")
     
     def sync_tasks_from_google(self, list_id: str = '@default') -> Tuple[int, int, List[str]]:
@@ -287,12 +366,19 @@ class GoogleTasksIntegration:
                     logger.error("Error processing Google task", 
                                task_title=google_task.title, error=str(e))
             
-            logger.info("Google Tasks sync completed", 
+            # 同步到每日任务追踪器
+            synced_to_tracker = self.task_tracker.sync_from_google_tasks(
+                google_tasks,
+                date.today().isoformat()
+            )
+
+            logger.info("Google Tasks sync completed",
                        total_tasks=len(google_tasks),
                        added_count=added_count,
                        updated_count=updated_count,
-                       errors_count=len(errors))
-            
+                       errors_count=len(errors),
+                       synced_to_tracker=synced_to_tracker)
+
             return added_count, updated_count, errors
         
         except Exception as e:
@@ -340,9 +426,10 @@ class GoogleTasksIntegration:
                 'Accept': 'application/json'
             }
             
-            logger.info("Syncing GTD task to Google Tasks", 
+            logger.info("Syncing GTD task to Google Tasks",
                        task_title=gtd_task.title,
-                       list_id=list_id)
+                       list_id=list_id,
+                       task_data=task_data)
             
             response = requests.post(
                 api_url,
@@ -583,6 +670,46 @@ class GoogleTasksIntegration:
             return False, error_msg
         except Exception as e:
             error_msg = f"标记任务完成时出错: {str(e)}"
-            logger.error("Error marking Google task completed", 
+            logger.error("Error marking Google task completed",
                         task_id=task_id, error=str(e))
             return False, error_msg
+
+    def delete_google_task(self, task_id: str) -> bool:
+        """从Google Tasks删除任务
+
+        Args:
+            task_id: Google Task ID
+
+        Returns:
+            是否成功删除
+        """
+        try:
+            if not self.google_auth.is_google_authenticated():
+                logger.warning("Google未认证，无法删除任务")
+                return False
+
+            token = self.google_auth.get_google_token()
+            if not token:
+                return False
+
+            # 删除任务
+            api_url = f'https://www.googleapis.com/tasks/v1/lists/@default/tasks/{task_id}'
+            headers = {
+                'Authorization': token.authorization_header,
+            }
+
+            response = requests.delete(api_url, headers=headers)
+
+            if response.status_code == 204:  # No content - 删除成功
+                logger.info("Successfully deleted Google task", task_id=task_id)
+                return True
+            else:
+                logger.error("Failed to delete Google task",
+                           task_id=task_id,
+                           status_code=response.status_code,
+                           response=response.text if response.text else "No response")
+                return False
+
+        except Exception as e:
+            logger.error("Error deleting Google task", task_id=task_id, error=str(e))
+            return False

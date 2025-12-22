@@ -14,6 +14,7 @@ import structlog
 from pm.core.config import PMConfig
 from .oauth_manager import OAuthManager, OAuthTokenInfo
 from .account_manager import AccountManager
+from pm.security.secrets import SecretsManager, SecretType
 
 logger = structlog.get_logger()
 
@@ -48,6 +49,7 @@ class GoogleAuthManager:
         self.config = config
         self.oauth_manager = OAuthManager(config)
         self.account_manager = AccountManager(config)
+        self.secrets_manager = SecretsManager()
 
         # 加载Google OAuth客户端配置
         self._credentials = self._load_google_credentials()
@@ -151,26 +153,36 @@ class GoogleAuthManager:
         token = self.get_google_token(account_alias)
         return token is not None and not token.is_expired
     
-    def revoke_google_auth(self) -> bool:
-        """撤销Google认证"""
-        
+    def revoke_google_auth(self, account_alias: str = None) -> bool:
+        """撤销Google认证
+
+        Args:
+            account_alias: 账号别名，如果为None则使用默认账号
+        """
+
         # 首先尝试向Google服务器撤销token
-        token = self.get_google_token()
+        token = self.get_google_token(account_alias)
         if token:
             try:
                 # 实际实现中这里会发送HTTP请求到GOOGLE_REVOKE_ENDPOINT
-                logger.info("Would revoke Google token", 
-                           endpoint=self.GOOGLE_REVOKE_ENDPOINT)
+                logger.info("Would revoke Google token",
+                           endpoint=self.GOOGLE_REVOKE_ENDPOINT,
+                           account=account_alias)
             except Exception as e:
                 logger.warning("Failed to revoke token with Google", error=str(e))
-        
+
         # 删除本地存储的token
-        return self.oauth_manager.revoke_token("google")
+        service_name = "google" if account_alias is None else f"google_{account_alias}"
+        return self.oauth_manager.revoke_token(service_name)
     
-    def get_google_auth_status(self) -> Dict[str, Any]:
-        """获取Google认证状态信息"""
-        
-        token = self.get_google_token()
+    def get_google_auth_status(self, account_alias: str = None) -> Dict[str, Any]:
+        """获取Google认证状态信息
+
+        Args:
+            account_alias: 账号别名，如果为None则使用默认账号
+        """
+
+        token = self.get_google_token(account_alias)
         
         if not token:
             return {
@@ -311,7 +323,173 @@ class GoogleAuthManager:
         
         logger.error("client_secret not found in credentials")
         return ""
-    
+
+    def add_account_credentials(self, account_alias: str, client_id: str, client_secret: str,
+                               email: str = "", display_name: str = "") -> bool:
+        """添加新账号的OAuth凭证到安全存储
+
+        Args:
+            account_alias: 账号别名
+            client_id: Google OAuth客户端ID
+            client_secret: Google OAuth客户端密钥
+            email: 账号邮箱
+            display_name: 显示名称
+
+        Returns:
+            是否添加成功
+        """
+        try:
+            # 将凭证存储到加密存储中
+            credentials_secret_id = self.secrets_manager.store_secret(
+                name=f"google_credentials_{account_alias}",
+                value=json.dumps({
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "email": email,
+                    "display_name": display_name
+                }),
+                secret_type=SecretType.OAUTH_SECRET,
+                description=f"Google OAuth credentials for account {account_alias}",
+                tags={"provider": "google", "account": account_alias, "type": "oauth_credentials"}
+            )
+
+            # 添加账号到账号管理器
+            success = self.account_manager.add_account(
+                alias=account_alias,
+                display_name=display_name or email or account_alias,
+                email=email
+            )
+
+            if success:
+                logger.info("Added account credentials successfully",
+                           account=account_alias,
+                           secret_id=credentials_secret_id.id)
+                return True
+            else:
+                # 如果账号添加失败，删除已存储的凭证
+                self.secrets_manager.delete_secret(credentials_secret_id.id)
+                return False
+
+        except Exception as e:
+            logger.error("Error adding account credentials", account=account_alias, error=str(e))
+            return False
+
+    def remove_account_credentials(self, account_alias: str) -> bool:
+        """删除账号的OAuth凭证
+
+        Args:
+            account_alias: 账号别名
+
+        Returns:
+            是否删除成功
+        """
+        try:
+            # 删除加密存储中的凭证
+            secret_name = f"google_credentials_{account_alias}"
+            secret_value = self.secrets_manager.get_secret_by_name(secret_name)
+
+            if secret_value:
+                # 找到并删除secret
+                secrets_list = self.secrets_manager.list_secrets(
+                    secret_type=SecretType.OAUTH_SECRET,
+                    tags={"provider": "google", "account": account_alias}
+                )
+                for secret_info in secrets_list:
+                    self.secrets_manager.delete_secret(secret_info['id'])
+
+            # 删除OAuth token
+            self.revoke_google_auth(account_alias)
+
+            # 从账号管理器中删除
+            success = self.account_manager.remove_account(account_alias)
+
+            if success:
+                logger.info("Removed account credentials successfully", account=account_alias)
+
+            return success
+
+        except Exception as e:
+            logger.error("Error removing account credentials", account=account_alias, error=str(e))
+            return False
+
+    def switch_account(self, account_alias: str) -> bool:
+        """切换默认账号
+
+        Args:
+            account_alias: 目标账号别名
+
+        Returns:
+            是否切换成功
+        """
+        # 检查账号是否存在
+        if not self.account_manager.get_account_info(account_alias):
+            logger.warning("Account not found for switching", account=account_alias)
+            return False
+
+        # 设置为默认账号
+        success = self.account_manager.set_default_account(account_alias)
+
+        if success:
+            logger.info("Switched default account", account=account_alias)
+
+        return success
+
+    def list_all_accounts(self) -> Dict[str, Dict[str, Any]]:
+        """列出所有账号及其状态
+
+        Returns:
+            账号状态字典
+        """
+        accounts = self.account_manager.list_accounts()
+        default_account = self.account_manager.get_default_account()
+
+        result = {}
+        for alias, account_info in accounts.items():
+            # 检查认证状态
+            is_authenticated = self.is_google_authenticated(alias)
+            token = self.get_google_token(alias)
+
+            # 检查凭证配置
+            has_credentials = self._has_stored_credentials(alias)
+
+            result[alias] = {
+                'alias': alias,
+                'display_name': account_info.get('display_name', alias),
+                'email': account_info.get('email', ''),
+                'is_default': alias == default_account,
+                'is_authenticated': is_authenticated,
+                'has_credentials': has_credentials,
+                'token_expired': token.is_expired if token else True,
+                'token_expires_at': token.expires_at.isoformat() if token and token.expires_at else None,
+                'services': account_info.get('services', [])
+            }
+
+        return result
+
+    def _has_stored_credentials(self, account_alias: str) -> bool:
+        """检查账号是否有存储的凭证"""
+        try:
+            secret_name = f"google_credentials_{account_alias}"
+            secret_value = self.secrets_manager.get_secret_by_name(secret_name)
+            return secret_value is not None
+        except Exception:
+            return False
+
+    def _get_stored_credentials(self, account_alias: str) -> Optional[Dict[str, str]]:
+        """获取存储的账号凭证"""
+        try:
+            secret_name = f"google_credentials_{account_alias}"
+            secret_value = self.secrets_manager.get_secret_by_name(secret_name)
+
+            if secret_value:
+                return json.loads(secret_value)
+            return None
+
+        except Exception as e:
+            logger.error("Error retrieving stored credentials",
+                        account=account_alias, error=str(e))
+            return None
+
     def is_credentials_configured(self) -> bool:
         """检查是否已正确配置Google凭证
         

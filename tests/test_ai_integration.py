@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from click.testing import CliRunner
 
-from pm.cli.commands.ai import ai, route, config_cmd, status
+from pm.cli.commands.ai import ai_app, route, config_cmd, status
 
 
 class TestAICommand:
@@ -27,7 +27,7 @@ class TestAICommand:
                 'status': 'success'
             }
 
-            result = self.runner.invoke(ai, ['route', 'test query'])
+            result = self.runner.invoke(ai_app, ['route', 'test query'])
 
             assert result.exit_code == 0
             mock_process.assert_called_once()
@@ -42,7 +42,7 @@ class TestAICommand:
                 'status': 'success'
             }
 
-            result = self.runner.invoke(ai, ['route', '--json', 'test query'])
+            result = self.runner.invoke(ai_app, ['route', '--json', 'test query'])
 
             assert result.exit_code == 0
             output = json.loads(result.output)
@@ -59,7 +59,7 @@ class TestAICommand:
                 'status': 'success'
             }
 
-            result = self.runner.invoke(ai, ['route', '--service=gemini', 'test query'])
+            result = self.runner.invoke(ai_app, ['route', '--service=gemini', 'test query'])
 
             assert result.exit_code == 0
             mock_process.assert_called_with('gemini', 'test query', mock_process.call_args[0][2])
@@ -67,7 +67,7 @@ class TestAICommand:
     def test_ai_config_list(self):
         """Test AI config list command."""
         with patch('pm.cli.commands.ai._list_ai_config') as mock_list:
-            result = self.runner.invoke(ai, ['config', '--list'])
+            result = self.runner.invoke(ai_app, ['config', '--list'])
 
             assert result.exit_code == 0
             mock_list.assert_called_once()
@@ -76,7 +76,7 @@ class TestAICommand:
         """Test AI config set command."""
         with patch('pm.core.config.Config.set') as mock_set:
             with patch('pm.core.config.Config.save') as mock_save:
-                result = self.runner.invoke(ai, ['config', '--set', 'default_service=gemini'])
+                result = self.runner.invoke(ai_app, ['config', '--set', 'default_service=gemini'])
 
                 assert result.exit_code == 0
                 mock_set.assert_called_with('ai.default_service', 'gemini')
@@ -86,7 +86,7 @@ class TestAICommand:
         """Test AI config get command."""
         with patch('pm.core.config.Config.get') as mock_get:
             mock_get.return_value = 'test_value'
-            result = self.runner.invoke(ai, ['config', '--get', 'api_key'])
+            result = self.runner.invoke(ai_app, ['config', '--get', 'api_key'])
 
             assert result.exit_code == 0
             assert 'api_key: test_value' in result.output
@@ -96,7 +96,7 @@ class TestAICommand:
         with patch('pm.cli.commands.ai._check_service_config') as mock_check:
             mock_check.side_effect = [True, False]  # Claude configured, Gemini not
 
-            result = self.runner.invoke(ai, ['status'])
+            result = self.runner.invoke(ai_app, ['status'])
 
             assert result.exit_code == 0
             assert mock_check.call_count == 2
@@ -106,7 +106,7 @@ class TestAICommand:
         with patch('pm.cli.commands.ai._check_service_config') as mock_check:
             mock_check.side_effect = [True, False]
 
-            result = self.runner.invoke(ai, ['status', '--json'])
+            result = self.runner.invoke(ai_app, ['status', '--json'])
 
             assert result.exit_code == 0
             output = json.loads(result.output)
@@ -192,13 +192,13 @@ class TestAIIntegration:
         with runner.isolated_filesystem():
             # Set up configuration
             with patch('pm.core.config.Config.save'):
-                result = runner.invoke(ai, ['config', '--set', 'default_service=claude'])
+                result = runner.invoke(ai_app, ['config', '--set', 'default_service=claude'])
                 assert result.exit_code == 0
 
             # Check status
             with patch('pm.cli.commands.ai._check_service_config') as mock_check:
                 mock_check.return_value = True
-                result = runner.invoke(ai, ['status'])
+                result = runner.invoke(ai_app, ['status'])
                 assert result.exit_code == 0
 
             # Execute query
@@ -209,5 +209,5 @@ class TestAIIntegration:
                     'response': 'response',
                     'status': 'success'
                 }
-                result = runner.invoke(ai, ['route', 'test'])
+                result = runner.invoke(ai_app, ['route', 'test'])
                 assert result.exit_code == 0

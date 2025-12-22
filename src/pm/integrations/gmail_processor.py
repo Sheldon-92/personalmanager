@@ -8,13 +8,14 @@ import re
 import requests
 import base64
 from email.mime.text import MIMEText
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional, Tuple
 import structlog
 
 from pm.core.config import PMConfig
 from pm.models.task import Task, TaskStatus, TaskContext, TaskPriority, EnergyLevel
 from .google_auth import GoogleAuthManager
+from .email_analyzer import EmailAnalyzer, EmailType
 
 logger = structlog.get_logger()
 
@@ -73,22 +74,26 @@ class EmailMessage:
     
     def to_gtd_task(self) -> Task:
         """转换为GTD任务"""
-        
+
+        # 使用邮件分析器进行智能分析
+        analyzer = EmailAnalyzer()
+        analysis = analyzer.analyze(self.subject, self.body, self.sender)
+
         # 根据邮件内容推断上下文
         context = self._infer_context()
-        
+
         # 根据重要性和紧急性推断优先级
         priority = self._infer_priority()
-        
+
         # 根据邮件复杂度推断所需精力
         energy = self._infer_energy_level()
-        
-        # 生成任务标题
-        task_title = f"📧 回复: {self.subject[:50]}{'...' if len(self.subject) > 50 else ''}"
+
+        # 使用分析器建议的标题
+        task_title = analysis.suggested_title or f"📧 {self.subject[:50]}{'...' if len(self.subject) > 50 else ''}"
         
         task = Task(
             title=task_title,
-            description=self._generate_task_description(),
+            description=analysis.suggested_description or self._generate_task_description(),
             status=TaskStatus.INBOX,  # 邮件任务首先进入收件箱
             context=context,
             priority=priority,
@@ -183,13 +188,32 @@ class EmailMessage:
     
     def _generate_task_description(self) -> str:
         """生成任务描述"""
-        
+
+        # 使用邮件分析器进行深度分析
+        analyzer = EmailAnalyzer()
+        analysis = analyzer.analyze(self.subject, self.body, self.sender)
+
         desc_parts = [
             f"发件人: {self.sender}",
             f"主题: {self.subject}",
             f"收到时间: {self.received_date.strftime('%Y-%m-%d %H:%M')}",
+            f"邮件类型: {analysis.email_type.value}",
             f"重要性评分: {self.importance_score:.2f}"
         ]
+
+        # 添加分析结果
+        if analysis.action_items:
+            desc_parts.append("\n行动项:")
+            for item in analysis.action_items:
+                desc_parts.append(f"  • {item}")
+
+        if analysis.discussion_points:
+            desc_parts.append("\n需要讨论:")
+            for point in analysis.discussion_points:
+                desc_parts.append(f"  • {point}")
+
+        if analysis.key_topics:
+            desc_parts.append(f"\n关键主题: {', '.join(analysis.key_topics)}")
         
         if self.attachments:
             desc_parts.append(f"附件: {len(self.attachments)}个")
@@ -214,6 +238,7 @@ class GmailProcessor:
         self.google_auth = GoogleAuthManager(config)
         
         logger.info("Gmail processor initialized")
+        self.email_analyzer = EmailAnalyzer()
     
     def scan_important_emails(self, days_back: int = 1, max_emails: int = 20) -> Tuple[List[EmailMessage], List[str]]:
         """扫描重要邮件
@@ -350,7 +375,7 @@ class GmailProcessor:
             }
             
             # 构建查询条件（过去N天的邮件）
-            cutoff_date = datetime.now() - timedelta(days=days_back)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_back)
             # Gmail API 使用 YYYY/MM/DD 格式，并且查询需要在收件箱中的邮件
             query = f"in:inbox after:{cutoff_date.strftime('%Y/%m/%d')}"
             
@@ -444,7 +469,7 @@ class GmailProcessor:
             return parsedate_to_datetime(date_str)
         except Exception:
             # 如果解析失败，返回当前时间
-            return datetime.now()
+            return datetime.now(timezone.utc)
     
     def _extract_email_body(self, payload: Dict[str, Any]) -> str:
         """从Gmail API payload中提取邮件正文"""
@@ -492,32 +517,53 @@ class GmailProcessor:
             logger.error("Failed to extract attachments", error=str(e))
         
         return attachments
+
+    def _is_forwarded_email(self, email: EmailMessage) -> bool:
+        """检查是否是转发邮件"""
+        # 检查主题是否包含转发标记
+        if email.subject:
+            subject_lower = email.subject.lower()
+            if any(fwd in subject_lower for fwd in ['fwd:', 'fw:', 'forwarded', '转发:']):
+                return True
+
+        # 检查邮件内容是否包含转发标记
+        if email.body:
+            body_lower = email.body[:500].lower()  # 只检查前500字符
+            if any(fwd in body_lower for fwd in ['forwarded message', '---------- forwarded', '转发的邮件']):
+                return True
+
+        return False
     
     def _calculate_importance(self, email: EmailMessage) -> float:
         """计算邮件重要性评分（0.0 - 1.0）"""
-        
+
+        # 检查是否是转发邮件（用户明确说明：所有转发的邮件都是重要的）
+        if self._is_forwarded_email(email):
+            # 转发邮件直接设置高分，确保被识别为重要
+            return 0.85
+
         score = 0.0
-        
+
         # 发件人重要性（0.3权重）
         sender_score = self._evaluate_sender_importance(email.sender)
         score += sender_score * 0.3
-        
+
         # 主题重要性（0.25权重）
         subject_score = self._evaluate_subject_importance(email.subject)
         score += subject_score * 0.25
-        
+
         # 内容重要性（0.25权重）
         content_score = self._evaluate_content_importance(email.body)
         score += content_score * 0.25
-        
+
         # 时间敏感性（0.1权重）
         urgency_score = self._evaluate_urgency(email)
         score += urgency_score * 0.1
-        
+
         # 标签和附件（0.1权重）
         metadata_score = self._evaluate_metadata(email)
         score += metadata_score * 0.1
-        
+
         return min(score, 1.0)  # 确保不超过1.0
     
     def _evaluate_sender_importance(self, sender: str) -> float:
@@ -572,7 +618,9 @@ class GmailProcessor:
         """评估时间敏感性"""
         
         # 最近收到的邮件可能更紧急
-        hours_ago = (datetime.now() - email.received_date).total_seconds() / 3600
+        # 确保使用带时区的datetime进行比较
+        now = datetime.now(timezone.utc) if email.received_date.tzinfo else datetime.now()
+        hours_ago = (now - email.received_date).total_seconds() / 3600
         
         if hours_ago < 1:
             return 1.0

@@ -47,17 +47,21 @@ class CalendarEvent:
         return self.start_time.date() == today
     
     def to_task(self) -> Task:
-        """转换为GTD任务"""
-        
+        """转换为GTD任务 - 仅转换可执行的任务，不转换纯日程"""
+
+        # 检查是否应该转换为任务
+        if not self._should_convert_to_task():
+            return None
+
         # 根据事件特征推断上下文
         context = self._infer_context()
-        
+
         # 根据紧急程度推断优先级
         priority = self._infer_priority()
-        
+
         # 根据持续时间推断所需精力
         energy = self._infer_energy_level()
-        
+
         task = Task(
             title=f"📅 {self.title}",
             description=self._generate_task_description(),
@@ -70,8 +74,59 @@ class CalendarEvent:
             source="google_calendar",
             source_id=self.event_id
         )
-        
+
         return task
+
+    def _should_convert_to_task(self) -> bool:
+        """判断日历事件是否应该转换为任务
+
+        规则：
+        - 课程/讲座/研讨会等纯参与性活动不转换
+        - 需要准备或有具体交付物的活动才转换
+        """
+        title_lower = self.title.lower()
+        desc_lower = (self.description or "").lower()
+
+        # 不应转换为任务的关键词（纯日程活动）
+        schedule_keywords = [
+            # 课程相关
+            'pgdm', 'nelp', 'psam', 'course', 'class', 'lecture', 'seminar',
+            'studio', 'workshop', '课程', '讲座', '研讨会', '工作坊',
+            # 会议相关（纯参与）
+            'standup', 'scrum', 'daily', '例会', '周会',
+            # 活动相关
+            'event', 'conference', 'meetup', '活动', '大会'
+        ]
+
+        # 应该转换为任务的关键词（需要行动）
+        task_keywords = [
+            'prepare', 'review', 'submit', 'complete', 'finish',
+            'write', 'design', 'develop', 'create', 'fix',
+            '准备', '提交', '完成', '撰写', '设计', '开发', '修复',
+            'assignment', 'homework', 'project', 'deadline',
+            '作业', '任务', '项目', '截止'
+        ]
+
+        # 检查是否包含不应转换的关键词
+        for keyword in schedule_keywords:
+            if keyword in title_lower:
+                # 但如果同时包含任务关键词，仍然转换
+                has_task_keyword = any(tk in title_lower or tk in desc_lower
+                                      for tk in task_keywords)
+                if not has_task_keyword:
+                    return False
+
+        # 如果明确包含任务关键词，应该转换
+        for keyword in task_keywords:
+            if keyword in title_lower or keyword in desc_lower:
+                return True
+
+        # 默认：短于30分钟的事件不转换（可能是例行会议）
+        if self.duration_minutes < 30:
+            return False
+
+        # 其他情况默认转换
+        return True
     
     def _infer_context(self) -> TaskContext:
         """根据事件内容推断执行上下文"""
@@ -201,14 +256,19 @@ class GoogleCalendarIntegration:
                     existing_event_ids = [t.source_id for t in existing_tasks if t.source_id]
                     
                     if event.event_id not in existing_event_ids:
-                        success = agent.storage.save_task(task)
-                        if success:
-                            synced_count += 1
-                            logger.info("Synced calendar event as task",
-                                      event_title=event.title,
-                                      event_time=event.start_time)
+                        # 只有应该转换的事件才保存为任务
+                        if task is not None:
+                            success = agent.storage.save_task(task)
+                            if success:
+                                synced_count += 1
+                                logger.info("Synced calendar event as task",
+                                          event_title=event.title,
+                                          event_time=event.start_time)
+                            else:
+                                errors.append(f"保存任务失败: {event.title}")
                         else:
-                            errors.append(f"保存任务失败: {event.title}")
+                            logger.debug("Skipped non-task calendar event",
+                                       event_title=event.title)
                     
                 except Exception as e:
                     error_msg = f"处理事件'{event.title}'时出错: {str(e)}"

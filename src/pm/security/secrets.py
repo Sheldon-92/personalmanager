@@ -5,17 +5,25 @@ API keys, passwords, tokens, and configuration secrets.
 """
 
 import base64
+import hashlib
 import json
 import os
+import platform
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from uuid import uuid4
+
+try:
+    import keyring
+    KEYRING_AVAILABLE = True
+except ImportError:
+    KEYRING_AVAILABLE = False
 
 
 class SecretType(Enum):
@@ -64,20 +72,25 @@ class Secret:
 
 
 class SecretsManager:
-    """Secure secrets management with encryption at rest."""
+    """Secure secrets management with encryption at rest and keyring integration."""
 
     def __init__(self, vault_path: Optional[Path] = None,
-                 master_key_path: Optional[Path] = None):
+                 master_key_path: Optional[Path] = None,
+                 use_keyring: bool = True):
         """Initialize secrets manager.
 
         Args:
             vault_path: Path to encrypted secrets vault
             master_key_path: Path to master encryption key
+            use_keyring: Whether to use OS keyring for master key storage
         """
         self.vault_path = vault_path or Path.home() / ".pm" / "secrets.vault"
         self.master_key_path = master_key_path or Path.home() / ".pm" / ".master_key"
-        self.cipher = self._initialize_encryption()
+        self.use_keyring = use_keyring and KEYRING_AVAILABLE
+        self.service_name = "PersonalManager"
         self.secrets: Dict[str, Secret] = {}
+        self.audit_log: List[Dict[str, Any]] = []
+        self.cipher = self._initialize_encryption()
         self._load_vault()
 
     def _initialize_encryption(self) -> Fernet:
@@ -86,20 +99,71 @@ class SecretsManager:
         Returns:
             Fernet cipher for encryption/decryption
         """
+        key = self._get_or_create_master_key()
+        return Fernet(key)
+
+    def _get_or_create_master_key(self) -> bytes:
+        """Get or create master encryption key using keyring when available.
+
+        Returns:
+            Master encryption key
+        """
+        key_id = f"{self.service_name}_master_key"
+
+        if self.use_keyring:
+            try:
+                # Try to get key from keyring
+                stored_key = keyring.get_password(self.service_name, key_id)
+                if stored_key:
+                    self._log_audit_event("master_key_accessed", {"source": "keyring"})
+                    return base64.urlsafe_b64decode(stored_key)
+            except Exception as e:
+                print(f"Warning: Failed to access keyring: {e}")
+
+        # Fallback to file-based storage
         if self.master_key_path.exists():
-            # Load existing master key
+            # Load existing master key from file
             with open(self.master_key_path, 'rb') as f:
                 key = f.read()
+                self._log_audit_event("master_key_accessed", {"source": "file"})
+
+                # Migrate to keyring if available
+                if self.use_keyring:
+                    try:
+                        encoded_key = base64.urlsafe_b64encode(key).decode()
+                        keyring.set_password(self.service_name, key_id, encoded_key)
+                        self._log_audit_event("master_key_migrated", {"from": "file", "to": "keyring"})
+                    except Exception as e:
+                        print(f"Warning: Failed to migrate key to keyring: {e}")
+
+                return key
         else:
             # Generate new master key
             key = self._generate_master_key()
-            self.master_key_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.master_key_path, 'wb') as f:
-                f.write(key)
-            # Restrict access to owner only
-            self.master_key_path.chmod(0o600)
 
-        return Fernet(key)
+            if self.use_keyring:
+                try:
+                    # Store in keyring
+                    encoded_key = base64.urlsafe_b64encode(key).decode()
+                    keyring.set_password(self.service_name, key_id, encoded_key)
+                    self._log_audit_event("master_key_created", {"source": "keyring"})
+                except Exception as e:
+                    print(f"Warning: Failed to store key in keyring, falling back to file: {e}")
+                    self._store_key_to_file(key)
+            else:
+                # Store in file
+                self._store_key_to_file(key)
+
+            return key
+
+    def _store_key_to_file(self, key: bytes) -> None:
+        """Store master key to file with secure permissions."""
+        self.master_key_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.master_key_path, 'wb') as f:
+            f.write(key)
+        # Restrict access to owner only
+        self.master_key_path.chmod(0o600)
+        self._log_audit_event("master_key_created", {"source": "file"})
 
     def _generate_master_key(self) -> bytes:
         """Generate a new master encryption key.
@@ -111,7 +175,7 @@ class SecretsManager:
         password = os.urandom(32)  # Random password
         salt = os.urandom(16)  # Random salt
 
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=salt,
@@ -462,7 +526,7 @@ class SecretsManager:
         """
         # Generate backup key from password
         salt = os.urandom(16)
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=salt,
@@ -526,3 +590,119 @@ class SecretsManager:
         except Exception as e:
             print(f"Failed to import backup: {e}")
             return False
+
+    def _log_audit_event(self, event_type: str, details: Dict[str, Any]) -> None:
+        """Log audit event for security monitoring."""
+        event = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'event_type': event_type,
+            'details': details,
+            'user': os.getenv('USER', 'unknown'),
+            'platform': platform.system()
+        }
+        self.audit_log.append(event)
+
+        # Keep only last 1000 events
+        if len(self.audit_log) > 1000:
+            self.audit_log = self.audit_log[-1000:]
+
+    def rotate_master_key(self) -> bool:
+        """Rotate the master encryption key.
+
+        Returns:
+            True if rotation successful
+        """
+        try:
+            # Generate new master key
+            new_key = self._generate_master_key()
+            new_cipher = Fernet(new_key)
+
+            # Re-encrypt all secrets with new key
+            for secret in self.secrets.values():
+                # Decrypt with old cipher
+                decrypted_value = self.cipher.decrypt(secret.value.encode())
+                # Re-encrypt with new cipher
+                secret.value = new_cipher.encrypt(decrypted_value).decode()
+
+            # Update cipher
+            old_cipher = self.cipher
+            self.cipher = new_cipher
+
+            # Store new key
+            key_id = f"{self.service_name}_master_key"
+            if self.use_keyring:
+                try:
+                    encoded_key = base64.urlsafe_b64encode(new_key).decode()
+                    keyring.set_password(self.service_name, key_id, encoded_key)
+                except Exception:
+                    self._store_key_to_file(new_key)
+            else:
+                self._store_key_to_file(new_key)
+
+            # Save vault with re-encrypted secrets
+            self._save_vault()
+
+            self._log_audit_event("master_key_rotated", {
+                "secret_count": len(self.secrets)
+            })
+
+            return True
+
+        except Exception as e:
+            print(f"Failed to rotate master key: {e}")
+            self._log_audit_event("master_key_rotation_failed", {"error": str(e)})
+            return False
+
+    def schedule_rotation(self, secret_id: str, rotation_period: timedelta) -> bool:
+        """Schedule automatic rotation for a secret.
+
+        Args:
+            secret_id: Secret ID
+            rotation_period: How often to rotate
+
+        Returns:
+            True if scheduled successfully
+        """
+        secret = self.secrets.get(secret_id)
+        if not secret:
+            return False
+
+        secret.rotation_period = rotation_period
+        secret.last_rotated = datetime.utcnow()
+
+        self._save_vault()
+        self._log_audit_event("rotation_scheduled", {
+            "secret_id": secret_id,
+            "period_days": rotation_period.days
+        })
+
+        return True
+
+    def get_audit_log(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get recent audit log entries.
+
+        Args:
+            limit: Maximum number of entries to return
+
+        Returns:
+            List of audit log entries
+        """
+        return self.audit_log[-limit:] if self.audit_log else []
+
+    def clear_audit_log(self) -> None:
+        """Clear audit log (use with caution)."""
+        self.audit_log.clear()
+        self._log_audit_event("audit_log_cleared", {})
+
+    def get_keyring_status(self) -> Dict[str, Any]:
+        """Get keyring availability and status.
+
+        Returns:
+            Keyring status information
+        """
+        return {
+            'keyring_available': KEYRING_AVAILABLE,
+            'keyring_enabled': self.use_keyring,
+            'platform': platform.system(),
+            'backend': keyring.get_keyring().__class__.__name__ if KEYRING_AVAILABLE else None
+        }

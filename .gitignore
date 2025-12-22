@@ -53,3 +53,20 @@ npm/**/node_modules/
 npm/**/dist/
 npm/**/*.tgz
 Personal Manager Test/
+
+# TAD Framework
+.tad/working/
+.tad/context/PROJECT.md
+.tad/context/REQUIREMENTS.md
+.tad/context/ARCHITECTURE.md
+.tad/context/DECISIONS.md
+.tad/evidence/project-logs/*/
+.tad/logs/
+*.log
+*.tmp
+
+# Local settings
+.claude/settings.local.json
+
+# MCP (Model Context Protocol)
+.tad/mcp-config.json

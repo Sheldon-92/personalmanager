@@ -65,14 +65,21 @@ check_python_module() {
 
 # Function to launch with Poetry
 launch_with_poetry() {
-    print_info "Using Poetry environment (poetry run pm)"
+    # Suppress info messages if --json is in arguments
+    if [[ "$*" != *"--json"* ]]; then
+        print_info "Using Poetry environment (poetry run pm)"
+    fi
+    export PYTHONWARNINGS="ignore"
     exec poetry run pm "$@"
 }
 
 # Function to launch with direct Python
 launch_with_python() {
-    print_info "Using direct Python execution (PYTHONPATH=src python3 -m pm.cli.main)"
-    
+    # Suppress info messages if --json is in arguments
+    if [[ "$*" != *"--json"* ]]; then
+        print_info "Using direct Python execution (PYTHONPATH=src python3 -m pm.cli.main)"
+    fi
+
     # Check if the module can be imported
     if ! check_python_module; then
         print_error "Cannot import pm.cli.main module from $PROJECT_ROOT/src"
@@ -82,8 +89,9 @@ launch_with_python() {
         print_error "  3. You have a working Python 3.9+ environment"
         exit 1
     fi
-    
+
     export PYTHONPATH="$PROJECT_ROOT/src"
+    export PYTHONWARNINGS="ignore"
     exec python3 -m pm.cli.main "$@"
 }
 

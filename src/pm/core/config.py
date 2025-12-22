@@ -64,6 +64,30 @@ class PMConfig(BaseSettings):
         env_prefix = "PM_"
         case_sensitive = False
     
+    @property
+    def db_path(self) -> str:
+        """Get the database path for PersonalManager.
+        
+        Uses the same logic as TimeBlockManager and PlanAnalyzer:
+        - First check if data/personal_manager.db exists (for development/testing)
+        - Otherwise use ~/.personalmanager/tasks.db (standard location)
+        """
+        # Try development/testing path first
+        alt_path = Path("data/personal_manager.db")
+        if alt_path.exists():
+            return str(alt_path)
+        
+        # Use standard database path
+        standard_path = self.data_dir / "tasks.db"
+        # Alternative standard path (used by some components)
+        alt_standard_path = Path.home() / ".personalmanager" / "tasks.db"
+        
+        # Return existing database or default standard path
+        if alt_standard_path.exists():
+            return str(alt_standard_path)
+        else:
+            return str(standard_path)
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._ensure_directories()
