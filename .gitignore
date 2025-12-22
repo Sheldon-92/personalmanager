@@ -70,3 +70,49 @@ Personal Manager Test/
 
 # MCP (Model Context Protocol)
 .tad/mcp-config.json
+
+# ==================== v0.5.0+ 清理新增 ====================
+
+# 运行时数据目录
+data/
+logs/
+reports/
+plans/
+schedules/
+
+# 配置目录（本地配置，不提交）
+config/
+configs/
+
+# 运行时生成文件
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# 备用虚拟环境
+.venv-rc/
+
+# 临时脚本输出
+runbooks/
+checksums.txt
+sbom.json
+test_briefing.json
+
+# 根目录临时测试文件
+/test_*.py
+!/tests/test_*.py
+/demo_*.py
+/example_*.py
+/planning_engine_examples.py
+
+# 临时验证脚本
+/verify_*.sh
+/bug_fix_verification.sh
+
+# 备份的 main.py 版本（开发过程产物）
+src/pm/cli/main_backup.py
+src/pm/cli/main_lazy.py
+src/pm/cli/main_lazy_v2.py
+src/pm/cli/main_optimized.py
