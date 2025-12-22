@@ -366,10 +366,91 @@ def cal(
 
 
 @app.command()
+def next(
+    path: str = typer.Option("~/programs", "--path", "-p", help="项目目录路径")
+):
+    """查看所有项目的下一步行动"""
+    import os
+    import re
+
+    # 展开路径
+    projects_dir = os.path.expanduser(path)
+
+    if not os.path.isdir(projects_dir):
+        console.print(f"[red]目录不存在: {projects_dir}[/red]")
+        return
+
+    console.print(Panel.fit(
+        f"[bold green]跨项目任务汇总[/bold green]",
+        border_style="green"
+    ))
+
+    all_tasks = []
+
+    # 扫描所有子目录
+    for item in os.listdir(projects_dir):
+        project_path = os.path.join(projects_dir, item)
+        next_file = os.path.join(project_path, "NEXT.md")
+
+        if os.path.isdir(project_path) and os.path.isfile(next_file):
+            try:
+                with open(next_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # 解析 NEXT.md
+                current_section = None
+                for line in content.split('\n'):
+                    line = line.strip()
+
+                    # 检测分类标题
+                    if line.startswith('## '):
+                        section = line[3:].strip()
+                        if '今天' in section or 'today' in section.lower():
+                            current_section = '今天'
+                        elif '本周' in section or 'week' in section.lower():
+                            current_section = '本周'
+                        elif '阻塞' in section or 'block' in section.lower():
+                            current_section = '阻塞'
+                        else:
+                            current_section = '待定'
+
+                    # 检测未完成任务
+                    elif line.startswith('- [ ]') and current_section:
+                        task_text = line[5:].strip()
+                        all_tasks.append({
+                            'project': item,
+                            'task': task_text,
+                            'priority': current_section
+                        })
+            except Exception as e:
+                console.print(f"[dim]读取 {item}/NEXT.md 失败: {e}[/dim]")
+
+    if not all_tasks:
+        console.print("[dim]没有找到任何项目的 NEXT.md 文件[/dim]")
+        console.print(f"[dim]扫描路径: {projects_dir}[/dim]")
+        return
+
+    # 按优先级分组显示
+    priority_order = ['今天', '本周', '阻塞', '待定']
+
+    for priority in priority_order:
+        tasks = [t for t in all_tasks if t['priority'] == priority]
+        if tasks:
+            # 选择颜色
+            color = {'今天': 'red', '本周': 'yellow', '阻塞': 'magenta', '待定': 'dim'}[priority]
+            console.print(f"\n[bold {color}]## {priority}[/bold {color}]")
+
+            for t in tasks:
+                console.print(f"  [{color}]○[/{color}] [cyan]{t['project']}[/cyan]: {t['task']}")
+
+    console.print(f"\n[dim]共 {len(all_tasks)} 个待办，来自 {len(set(t['project'] for t in all_tasks))} 个项目[/dim]")
+
+
+@app.command()
 def version():
     """显示版本信息"""
     console.print("[bold]PersonalManager[/bold] v2.0.0 (极简版)")
-    console.print("[dim]只做一件事：管理你的日程和任务[/dim]")
+    console.print("[dim]管理你的日程、任务和项目进展[/dim]")
 
 
 def main():
