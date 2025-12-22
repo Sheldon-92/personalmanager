@@ -1,6 +1,0 @@
-#!/bin/bash
-# PersonalManager交互模式快捷命令
-# 启动斜杠命令和编号选择界面
-
-cd "$(dirname "$0")/.."
-./bin/pm-local interactive "$@"

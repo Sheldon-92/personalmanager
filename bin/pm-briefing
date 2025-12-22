@@ -1,6 +1,0 @@
-#!/bin/bash
-# PersonalManager Briefing快捷命令
-# 快速获取双向简报
-
-cd "$(dirname "$0")/.."
-./bin/pm-local briefing "$@"
