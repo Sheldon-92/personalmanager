@@ -449,7 +449,6 @@ class OAuthManager:
 
     def _get_client_id_for_service(self, service_name: str) -> Optional[str]:
         """获取指定服务的client_id"""
-        # 从Google credentials.json文件获取client_id
         try:
             from pathlib import Path
             import json
@@ -458,7 +457,12 @@ class OAuthManager:
             if credentials_path.exists():
                 with open(credentials_path, 'r', encoding='utf-8') as f:
                     credentials = json.load(f)
-                    if 'installed' in credentials and 'client_id' in credentials['installed']:
+                    # 支持多种格式
+                    if 'client_id' in credentials:
+                        return credentials['client_id']
+                    elif 'web' in credentials and 'client_id' in credentials['web']:
+                        return credentials['web']['client_id']
+                    elif 'installed' in credentials and 'client_id' in credentials['installed']:
                         return credentials['installed']['client_id']
         except Exception as e:
             logger.error("Error loading client_id from credentials", error=str(e))
@@ -466,7 +470,6 @@ class OAuthManager:
 
     def _get_client_secret_for_service(self, service_name: str) -> Optional[str]:
         """获取指定服务的client_secret"""
-        # 从Google credentials.json文件获取client_secret
         try:
             from pathlib import Path
             import json
@@ -475,7 +478,12 @@ class OAuthManager:
             if credentials_path.exists():
                 with open(credentials_path, 'r', encoding='utf-8') as f:
                     credentials = json.load(f)
-                    if 'installed' in credentials and 'client_secret' in credentials['installed']:
+                    # 支持多种格式
+                    if 'client_secret' in credentials:
+                        return credentials['client_secret']
+                    elif 'web' in credentials and 'client_secret' in credentials['web']:
+                        return credentials['web']['client_secret']
+                    elif 'installed' in credentials and 'client_secret' in credentials['installed']:
                         return credentials['installed']['client_secret']
         except Exception as e:
             logger.error("Error loading client_secret from credentials", error=str(e))

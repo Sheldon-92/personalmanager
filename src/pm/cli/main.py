@@ -367,11 +367,99 @@ def cal(
 
 @app.command()
 def next(
-    path: str = typer.Option("~/programs", "--path", "-p", help="项目目录路径")
+    path: str = typer.Option("~/programs", "--path", "-p", help="项目目录路径"),
+    push: bool = typer.Option(False, "--push", help="推送任务到 Google Tasks"),
+    pull: bool = typer.Option(False, "--pull", help="从 Google Tasks 拉取完成状态")
 ):
-    """查看所有项目的下一步行动"""
+    """查看/同步所有项目的下一步行动"""
     import os
-    import re
+
+    # Check for mutual exclusivity
+    if push and pull:
+        console.print("[red]错误: --push 和 --pull 不能同时使用[/red]")
+        return
+
+    if push:
+        _do_next_push(path)
+    elif pull:
+        _do_next_pull(path)
+    else:
+        _do_next_list(path)
+
+
+def _do_next_push(path: str):
+    """Push tasks to Google Tasks"""
+    from pm.core.next_sync import NextSyncManager
+
+    console.print(Panel.fit(
+        "[bold green]推送任务到 Google Tasks[/bold green]",
+        border_style="green"
+    ))
+
+    try:
+        config = get_config()
+        sync_manager = NextSyncManager(config, path)
+
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("正在同步...", total=None)
+            stats = sync_manager.push()
+
+        # Display results
+        console.print()
+        console.print(f"[cyan]扫描项目:[/cyan] {stats.projects_scanned}")
+        console.print(f"[cyan]发现任务:[/cyan] {stats.tasks_found}")
+        console.print(f"[green]已推送:[/green] {stats.tasks_pushed}")
+        console.print(f"[yellow]已跳过(重复):[/yellow] {stats.tasks_skipped}")
+
+        if stats.errors:
+            console.print(f"\n[red]错误 ({len(stats.errors)}):[/red]")
+            for err in stats.errors[:5]:  # Show first 5 errors
+                console.print(f"  [dim]• {err}[/dim]")
+
+        if stats.tasks_pushed > 0:
+            console.print(f"\n[green]✓ 已同步到 Google Tasks 'NEXT Tasks' 列表[/green]")
+
+    except Exception as e:
+        console.print(f"[red]推送失败: {e}[/red]")
+
+
+def _do_next_pull(path: str):
+    """Pull completed tasks from Google Tasks"""
+    from pm.core.next_sync import NextSyncManager
+
+    console.print(Panel.fit(
+        "[bold blue]从 Google Tasks 拉取完成状态[/bold blue]",
+        border_style="blue"
+    ))
+
+    try:
+        config = get_config()
+        sync_manager = NextSyncManager(config, path)
+
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
+            progress.add_task("正在拉取...", total=None)
+            stats = sync_manager.pull()
+
+        # Display results
+        console.print()
+        console.print(f"[cyan]已完成任务:[/cyan] {stats.tasks_pulled}")
+        console.print(f"[green]已更新 NEXT.md:[/green] {stats.tasks_updated}")
+
+        if stats.errors:
+            console.print(f"\n[red]错误 ({len(stats.errors)}):[/red]")
+            for err in stats.errors[:5]:
+                console.print(f"  [dim]• {err}[/dim]")
+
+        if stats.tasks_updated > 0:
+            console.print(f"\n[green]✓ 已更新各项目 NEXT.md 文件[/green]")
+
+    except Exception as e:
+        console.print(f"[red]拉取失败: {e}[/red]")
+
+
+def _do_next_list(path: str):
+    """List tasks from all NEXT.md files (original behavior)"""
+    import os
 
     # 展开路径
     projects_dir = os.path.expanduser(path)
@@ -428,6 +516,7 @@ def next(
     if not all_tasks:
         console.print("[dim]没有找到任何项目的 NEXT.md 文件[/dim]")
         console.print(f"[dim]扫描路径: {projects_dir}[/dim]")
+        console.print(f"\n[dim]提示: 使用 --push 推送任务到 Google Tasks[/dim]")
         return
 
     # 按优先级分组显示
@@ -444,6 +533,7 @@ def next(
                 console.print(f"  [{color}]○[/{color}] [cyan]{t['project']}[/cyan]: {t['task']}")
 
     console.print(f"\n[dim]共 {len(all_tasks)} 个待办，来自 {len(set(t['project'] for t in all_tasks))} 个项目[/dim]")
+    console.print(f"[dim]提示: --push 推送到 Google | --pull 拉取完成状态[/dim]")
 
 
 @app.command()

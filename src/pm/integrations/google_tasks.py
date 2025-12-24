@@ -713,3 +713,182 @@ class GoogleTasksIntegration:
         except Exception as e:
             logger.error("Error deleting Google task", task_id=task_id, error=str(e))
             return False
+
+    def create_task_list(self, title: str) -> Optional[str]:
+        """Create a new task list in Google Tasks
+
+        Args:
+            title: Name of the new task list
+
+        Returns:
+            list_id if created successfully, None otherwise
+        """
+        if not self.google_auth.is_google_authenticated():
+            logger.warning("Google未认证，无法创建任务列表")
+            return None
+
+        token = self.google_auth.get_google_token()
+        if not token or token.is_expired:
+            logger.warning("No valid token for creating task list")
+            return None
+
+        try:
+            api_url = 'https://www.googleapis.com/tasks/v1/users/@me/lists'
+
+            headers = {
+                'Authorization': token.authorization_header,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+
+            task_list_data = {'title': title}
+
+            logger.info("Creating Google Tasks list", title=title)
+
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=task_list_data,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                created_list = response.json()
+                list_id = created_list.get('id')
+                logger.info("Successfully created Google Tasks list",
+                           title=title, list_id=list_id)
+                return list_id
+            elif response.status_code == 401:
+                logger.error("Google Tasks API authentication failed")
+                return None
+            else:
+                logger.error("Failed to create Google Tasks list",
+                           status_code=response.status_code,
+                           response=response.text)
+                return None
+
+        except requests.RequestException as e:
+            logger.error("HTTP request failed when creating task list", error=str(e))
+            return None
+        except Exception as e:
+            logger.error("Error creating Google Tasks list", error=str(e))
+            return None
+
+    def find_or_create_task_list(self, title: str) -> Optional[str]:
+        """Find existing task list by title or create a new one
+
+        Args:
+            title: Name of the task list
+
+        Returns:
+            list_id if found or created, None otherwise
+        """
+        # First try to find existing list
+        existing_lists = self.get_google_tasks_lists()
+        for task_list in existing_lists:
+            if task_list.get('title', '').lower() == title.lower():
+                logger.info("Found existing task list", title=title, list_id=task_list['id'])
+                return task_list['id']
+
+        # Create new list if not found
+        return self.create_task_list(title)
+
+    def create_task(
+        self,
+        list_id: str,
+        title: str,
+        notes: Optional[str] = None,
+        due_date: Optional[date] = None
+    ) -> Tuple[bool, str]:
+        """Create a task in a specific Google Tasks list
+
+        Args:
+            list_id: The task list ID
+            title: Task title
+            notes: Optional task notes/description
+            due_date: Optional due date
+
+        Returns:
+            Tuple[success, message or task_id]
+        """
+        if not self.google_auth.is_google_authenticated():
+            return False, "未通过Google认证，请先运行: pm sync"
+
+        token = self.google_auth.get_google_token()
+        if not token or token.is_expired:
+            return False, "Google认证已过期，请重新认证"
+
+        try:
+            api_url = f'https://www.googleapis.com/tasks/v1/lists/{list_id}/tasks'
+
+            headers = {
+                'Authorization': token.authorization_header,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+
+            task_data = {'title': title}
+
+            if notes:
+                task_data['notes'] = notes
+
+            if due_date:
+                # Google Tasks API requires RFC 3339 format
+                task_data['due'] = f"{due_date.isoformat()}T00:00:00.000Z"
+
+            logger.info("Creating task in Google Tasks",
+                       list_id=list_id, title=title)
+
+            response = requests.post(
+                api_url,
+                headers=headers,
+                json=task_data,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                created_task = response.json()
+                task_id = created_task.get('id')
+                logger.info("Successfully created Google task",
+                           title=title, task_id=task_id)
+                return True, task_id
+            elif response.status_code == 401:
+                logger.error("Google Tasks API authentication failed")
+                return False, "Google认证失败，请重新登录"
+            else:
+                logger.error("Failed to create Google task",
+                           status_code=response.status_code,
+                           response=response.text)
+                return False, f"创建任务失败 (HTTP {response.status_code})"
+
+        except requests.RequestException as e:
+            error_msg = f"网络请求失败: {str(e)}"
+            logger.error("HTTP request failed when creating task", error=str(e))
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"创建任务时出错: {str(e)}"
+            logger.error("Error creating Google task", error=str(e))
+            return False, error_msg
+
+    def get_completed_tasks(self, list_id: str) -> List[GoogleTask]:
+        """Get completed tasks from a specific list
+
+        Args:
+            list_id: The task list ID
+
+        Returns:
+            List of completed GoogleTask objects
+        """
+        all_tasks = self._fetch_google_tasks(list_id)
+        return [t for t in all_tasks if t.is_completed]
+
+    def get_tasks_from_list(self, list_id: str) -> List[GoogleTask]:
+        """Get all tasks from a specific list
+
+        Args:
+            list_id: The task list ID
+
+        Returns:
+            List of GoogleTask objects
+        """
+        return self._fetch_google_tasks(list_id)
