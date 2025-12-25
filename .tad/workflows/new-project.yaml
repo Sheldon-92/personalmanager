@@ -1,0 +1,258 @@
+# TAD New Project Workflow (基于 BMAD 工作流简化)
+workflow:
+  id: new-project
+  name: New Project from Scratch
+  description: >-
+    Complete workflow for starting a new project from zero.
+    Uses TAD's triangle model with Alex (Agent A) and Blake (Agent B).
+  type: greenfield
+
+  # TAD 三角模型流程
+  triangle_flow:
+    human_terminal_1: "Interact with Alex"
+    human_terminal_2: "Interact with Blake"
+    communication: "Via handoff documents"
+
+  sequence:
+    # ========== PHASE 1: Requirements (Terminal 1 with Alex) ==========
+    - step: project_initiation
+      agent: agent-a
+      terminal: 1
+      action: "Understand what human wants to build"
+      command: "*analyze"
+      notes: |
+        Alex must complete 3-5 rounds of requirement elicitation.
+        This is MANDATORY - no shortcuts allowed.
+
+    - step: requirement_confirmation
+      agent: agent-a
+      terminal: 1
+      creates: .tad/docs/requirements/requirements.md
+      validation: |
+        Requirements must be:
+        - Confirmed through 3-5 rounds
+        - Documented completely
+        - Approved by human
+
+    # ========== PHASE 2: Design (Terminal 1 with Alex) ==========
+    - step: solution_design
+      agent: agent-a
+      terminal: 1
+      action: "Create technical design based on requirements"
+      command: "*design"
+      requires: requirements.md
+      creates: .tad/docs/design/design.md
+      notes: |
+        Alex creates comprehensive design including:
+        - Architecture overview
+        - Component specifications
+        - API definitions
+        - Data models
+
+    - step: design_review
+      agent: agent-a
+      terminal: 1
+      action: "Review design with human"
+      validation: |
+        Design must include:
+        - All functional components
+        - Clear interfaces
+        - Test strategy
+        - Performance considerations
+
+    # ========== PHASE 3: Handoff Creation (Terminal 1 with Alex) ==========
+    - step: handoff_preparation
+      agent: agent-a
+      terminal: 1
+      action: "Create comprehensive handoff for Blake"
+      command: "*handoff"
+      requires:
+        - requirements.md
+        - design.md
+      creates: .tad/docs/handoffs/handoff.md
+      critical: true
+      notes: |
+        ⚠️ CRITICAL: Handoff must be complete before Blake can start.
+        This document is Blake's ONLY source of information.
+
+    - step: handoff_validation
+      agent: agent-a
+      terminal: 1
+      action: "Validate handoff completeness"
+      checklist:
+        - All 10 sections filled
+        - No ambiguities
+        - Implementation steps clear
+        - Test requirements defined
+        - Acceptance criteria measurable
+
+    # ========== HUMAN TRANSFER ==========
+    - step: human_transfer
+      agent: human
+      action: "Transfer handoff from Terminal 1 to Terminal 2"
+      notes: |
+        Human takes handoff document from Alex (Terminal 1)
+        and provides it to Blake (Terminal 2)
+
+    # ========== PHASE 4: Implementation (Terminal 2 with Blake) ==========
+    - step: handoff_verification
+      agent: agent-b
+      terminal: 2
+      action: "Verify handoff completeness"
+      validation: |
+        If handoff incomplete:
+        - List missing sections
+        - Send back to Alex
+        - HALT until complete
+
+    - step: implementation_planning
+      agent: agent-b
+      terminal: 2
+      action: "Review handoff and plan implementation"
+      command: "*status"
+      notes: |
+        Blake analyzes handoff to understand:
+        - What to build
+        - Order of implementation
+        - Testing requirements
+
+    - step: development
+      agent: agent-b
+      terminal: 2
+      action: "Implement according to handoff"
+      command: "*develop"
+      creates:
+        - Source code files
+        - Test files
+        - Configuration files
+      notes: |
+        Blake follows implementation steps exactly as specified in handoff.
+        Any ambiguities must be sent back to Alex.
+
+    - step: testing
+      agent: agent-b
+      terminal: 2
+      action: "Write and run tests"
+      command: "*test"
+      validation:
+        - All unit tests pass
+        - Integration tests pass
+        - Coverage meets requirements
+
+    - step: completion_checklist
+      agent: agent-b
+      terminal: 2
+      action: "Run final checklist"
+      command: "*checklist implementation-checklist"
+      validation:
+        - All tasks completed
+        - Tests passing
+        - Documentation updated
+        - Ready for review
+
+    # ========== PHASE 5: Review Cycle (Back to Terminal 1) ==========
+    - step: human_transfer_results
+      agent: human
+      action: "Transfer implementation results to Alex"
+      notes: |
+        Human takes Blake's implementation status
+        back to Alex for review
+
+    - step: implementation_review
+      agent: agent-a
+      terminal: 1
+      action: "Review Blake's implementation"
+      command: "*review"
+      validation:
+        - Meets requirements
+        - Follows design
+        - Quality standards met
+
+    - step: feedback_cycle
+      condition: issues_found
+      action: "Create feedback handoff for Blake"
+      notes: |
+        If issues found:
+        1. Alex creates fix handoff
+        2. Human transfers to Blake
+        3. Blake implements fixes
+        4. Cycle repeats until approved
+
+    # ========== COMPLETION ==========
+    - step: project_completion
+      action: "Project ready for deployment"
+      final_artifacts:
+        - Requirements document
+        - Design document
+        - Implemented code
+        - Test suite
+        - Documentation
+
+  # Decision points and routing
+  decision_points:
+    after_requirements:
+      question: "Are requirements clear and complete?"
+      yes: "Proceed to design"
+      no: "Continue elicitation rounds"
+
+    after_design:
+      question: "Is design approved?"
+      yes: "Create handoff"
+      no: "Refine design"
+
+    after_handoff:
+      question: "Is handoff complete?"
+      yes: "Send to Blake"
+      no: "Complete missing sections"
+
+    after_implementation:
+      question: "Does implementation meet requirements?"
+      yes: "Project complete"
+      no: "Create fix handoff"
+
+  # Quality gates (from BMAD)
+  quality_gates:
+    requirements_gate:
+      - "Minimum 3 rounds of elicitation completed"
+      - "All stakeholders identified"
+      - "Success criteria defined"
+
+    design_gate:
+      - "All components specified"
+      - "Interfaces defined"
+      - "Non-functional requirements addressed"
+
+    handoff_gate:
+      - "All sections complete"
+      - "No ambiguities"
+      - "Blake can work independently"
+
+    implementation_gate:
+      - "All tests passing"
+      - "Code standards met"
+      - "Documentation complete"
+
+  # Violation checks
+  violations:
+    - id: "SKIP_ELICITATION"
+      description: "Less than 3 rounds of requirement elicitation"
+      severity: "CRITICAL"
+      action: "Return to requirement phase"
+
+    - id: "INCOMPLETE_HANDOFF"
+      description: "Handoff missing required sections"
+      severity: "CRITICAL"
+      action: "Cannot proceed to implementation"
+
+    - id: "NO_TESTS"
+      description: "Implementation without tests"
+      severity: "HIGH"
+      action: "Must add tests before completion"
+
+  # Success metrics
+  success_metrics:
+    - "Requirements confirmed in 3-5 rounds"
+    - "Single handoff sufficient for implementation"
+    - "No back-and-forth during implementation"
+    - "All tests passing on first complete run"
+    - "Implementation matches design exactly"

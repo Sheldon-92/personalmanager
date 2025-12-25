@@ -1,0 +1,180 @@
+# TAD Document Manifest v1.1
+version: 1.1
+created_at: '2025-01-28T16:00:00.000Z'
+last_updated: '2025-01-28T16:30:00.000Z'
+method: TAD
+framework_version: "1.1"
+
+# 安装信息
+installation:
+  type: full
+  installed_by: human
+  base_framework: "BMAD mechanisms adapted for TAD"
+
+# 配置文件
+configurations:
+  - path: .tad/config.yaml
+    version: "1.2.2"
+    status: active
+    description: "主配置 - MCP 集成和 sub-agent 强制规则"
+    hash: pending
+    modified: false
+
+# Agent 定义
+agents:
+  - path: .tad/agents/agent-a-architect-v1.1.md
+    version: "1.2.2"
+    role: "Solution Lead"
+    terminal: 1
+    description: "Alex - 整合 PM/PO/Analyst/Architect/UX 角色"
+    hash: pending
+    modified: false
+
+  - path: .tad/agents/agent-b-executor-v1.1.md
+    version: "1.2.2"
+    role: "Execution Master"
+    terminal: 2
+    description: "Blake - 整合 Dev/QA/DevOps 角色"
+    hash: pending
+    modified: false
+
+# 任务文件（可执行工作流）
+tasks:
+  agent_a_tasks:
+    - path: .tad/tasks/requirement-elicitation.md
+      description: "需求挖掘 - 强制 3-5 轮确认"
+      critical: true
+      elicitation: true
+
+    - path: .tad/tasks/design-creation.md
+      description: "设计创建"
+      status: pending_creation
+
+    - path: .tad/tasks/handoff-creation.md
+      description: "交接文档创建 - Blake 唯一信息源"
+      critical: true
+
+  agent_b_tasks:
+    - path: .tad/tasks/develop-task.md
+      description: "开发任务执行"
+      status: pending_creation
+
+    - path: .tad/tasks/test-execution.md
+      description: "测试执行"
+      status: pending_creation
+
+  shared_tasks:
+    - path: .tad/tasks/execute-checklist.md
+      description: "检查清单执行"
+      status: pending_creation
+
+# 模板文件
+templates:
+  - path: .tad/templates/requirement-tmpl.yaml
+    description: "需求文档模板"
+    status: pending_creation
+
+  - path: .tad/templates/design-tmpl.yaml
+    description: "设计文档模板"
+    status: pending_creation
+
+  - path: .tad/templates/handoff-tmpl.yaml
+    description: "交接文档模板"
+    status: pending_creation
+
+# 工作流
+workflows:
+  - path: .tad/workflows/new-project.yaml
+    description: "新项目工作流 - 完整的三角协作流程"
+    agents_involved: ["agent-a", "agent-b", "human"]
+
+  - path: .tad/workflows/bug-fix.yaml
+    description: "Bug 修复工作流"
+    status: pending_creation
+
+  - path: .tad/workflows/feature-addition.yaml
+    description: "功能添加工作流"
+    status: pending_creation
+
+# 检查清单
+checklists:
+  agent_a:
+    - path: .tad/checklists/requirement-checklist.md
+      status: pending_creation
+
+    - path: .tad/checklists/design-checklist.md
+      status: pending_creation
+
+    - path: .tad/checklists/handoff-checklist.md
+      status: pending_creation
+
+  agent_b:
+    - path: .tad/checklists/implementation-checklist.md
+      status: pending_creation
+
+    - path: .tad/checklists/test-checklist.md
+      status: pending_creation
+
+# 数据资源
+data:
+  - path: .tad/data/elicitation-methods.md
+    description: "20+ elicitation 方法（从 BMAD 复制）"
+    source: "BMAD"
+
+# 关键机制（从 BMAD 借鉴）
+borrowed_mechanisms:
+  from_bmad:
+    - "强制激活协议（4 步）"
+    - "命令系统（* 前缀）"
+    - "强制交互（0-9 选项）"
+    - "违规检测（VIOLATION INDICATOR）"
+    - "可执行任务文件"
+    - "文档所有权系统"
+    - "嵌入式 LLM 指令 [[LLM:]]"
+    - "YOLO 模式"
+    - "文件 hash 验证"
+    - "elicit: true 机制"
+
+# 简化内容（相对 BMAD）
+simplifications:
+  - "10 个角色 → 3 个角色（Human + Agent A + Agent B）"
+  - "复杂工作流 → 简化的三角流程"
+  - "多个配置文件 → 单一配置文件"
+  - "Agent 间直接通信 → 通过 Human 和 handoff 文档"
+
+# 创新点（TAD 独特）
+innovations:
+  - "双终端工作模式"
+  - "Handoff 作为唯一通信渠道"
+  - "Human 作为价值守护者和信息传递者"
+  - "简化但不简单的执行机制"
+
+# 质量指标
+metrics:
+  expected:
+    requirement_rounds_min: 3
+    requirement_rounds_max: 5
+    handoff_completeness: "100%"
+    test_coverage_min: "80%"
+    violation_rate_max: "5%"
+
+# 下一步
+next_steps:
+  immediate:
+    - "创建剩余的任务文件"
+    - "创建模板文件"
+    - "创建检查清单"
+    - "测试完整工作流"
+
+  future:
+    - "添加更多工作流"
+    - "增加 sub-agent 集成"
+    - "性能优化"
+    - "添加更多 elicitation 方法"
+
+# 状态
+status:
+  framework: "ready_for_testing"
+  completeness: "60%"  # 核心机制完成，部分文件待创建
+  blocking_issues: none
+  ready_for_use: true  # 核心功能可用

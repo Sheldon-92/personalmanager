@@ -1,0 +1,29 @@
+# Project Evidence Logs
+
+This directory contains evidence from individual TAD project executions.
+
+Each project should have its own subdirectory with:
+- requirements.md: Original human requirements
+- agent-interactions/: Conversation logs between agents
+- code-changes/: Before/after code comparisons
+- quality-gates/: Gate execution results
+- delivery-report.md: Final delivery evidence
+
+Example structure:
+```
+project-logs/
+├── menu-snap-recommendations/
+│   ├── requirements.md
+│   ├── agent-interactions/
+│   │   ├── agent-a-log.md
+│   │   └── agent-b-log.md
+│   ├── code-changes/
+│   │   ├── before-implementation/
+│   │   └── after-implementation/
+│   ├── quality-gates/
+│   │   ├── gate-1-requirements.md
+│   │   ├── gate-2-design.md
+│   │   ├── gate-3-implementation.md
+│   │   └── gate-4-integration.md
+│   └── delivery-report.md
+```

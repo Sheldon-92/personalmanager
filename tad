@@ -1,0 +1,142 @@
+#!/bin/bash
+
+# TAD Framework CLI v1.2
+# Simple command-line interface for TAD management
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Get TAD root directory
+TAD_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Main command handler
+case "$1" in
+    version|--version|-v)
+        if [ -f "$TAD_ROOT/.tad/version.txt" ]; then
+            echo "TAD Framework v$(cat "$TAD_ROOT/.tad/version.txt")"
+        else
+            echo -e "${YELLOW}TAD not installed or version file missing${NC}"
+            exit 1
+        fi
+        ;;
+
+    doctor)
+        echo "=========================================="
+        echo "TAD Framework Health Check"
+        echo "=========================================="
+        echo ""
+
+        # Check .tad directory
+        if [ -d "$TAD_ROOT/.tad" ]; then
+            echo -e "${GREEN}✓${NC} .tad directory exists"
+        else
+            echo -e "${RED}✗${NC} .tad directory missing"
+            exit 1
+        fi
+
+        # Check version
+        if [ -f "$TAD_ROOT/.tad/version.txt" ]; then
+            VERSION=$(cat "$TAD_ROOT/.tad/version.txt")
+            echo -e "${GREEN}✓${NC} Version: $VERSION"
+        else
+            echo -e "${YELLOW}⚠${NC} Version file missing"
+        fi
+
+        # Check agents
+        if [ -f "$TAD_ROOT/.tad/agents/agent-a-architect-v1.1.md" ] && \
+           [ -f "$TAD_ROOT/.tad/agents/agent-b-executor-v1.1.md" ]; then
+            echo -e "${GREEN}✓${NC} Agent definitions present"
+        else
+            echo -e "${YELLOW}⚠${NC} Some agent definitions missing"
+        fi
+
+        # Check config
+        if [ -f "$TAD_ROOT/.tad/config-v3.yaml" ] || [ -L "$TAD_ROOT/.tad/config.yaml" ]; then
+            echo -e "${GREEN}✓${NC} Configuration files present"
+        else
+            echo -e "${YELLOW}⚠${NC} Configuration files missing"
+        fi
+
+        # Check slash commands
+        if [ -d "$TAD_ROOT/.claude/commands" ]; then
+            COMMAND_COUNT=$(find "$TAD_ROOT/.claude/commands" -name "tad-*.md" | wc -l)
+            echo -e "${GREEN}✓${NC} Slash commands: $COMMAND_COUNT found"
+        else
+            echo -e "${YELLOW}⚠${NC} Slash commands directory missing"
+        fi
+
+        # Check for MCP tools (optional)
+        echo ""
+        echo "MCP Tools (Optional):"
+        if command -v npx &> /dev/null; then
+            echo -e "${GREEN}✓${NC} npx available (can install MCP tools)"
+        else
+            echo -e "${YELLOW}⚠${NC} npx not found (install Node.js to use MCP tools)"
+        fi
+
+        echo ""
+        echo "=========================================="
+        echo -e "${GREEN}Health check complete!${NC}"
+        echo "=========================================="
+        ;;
+
+    upgrade)
+        echo "Upgrading TAD Framework..."
+        echo ""
+
+        # Detect current version
+        if [ -f "$TAD_ROOT/.tad/version.txt" ]; then
+            CURRENT_VERSION=$(cat "$TAD_ROOT/.tad/version.txt")
+            echo "Current version: v$CURRENT_VERSION"
+
+            if [ "$CURRENT_VERSION" = "1.2" ]; then
+                echo -e "${GREEN}You're already on the latest version!${NC}"
+                exit 0
+            fi
+        fi
+
+        # Run upgrade
+        cd "$TAD_ROOT"
+        curl -sSL https://raw.githubusercontent.com/Sheldon-92/TAD/main/install.sh | bash
+        ;;
+
+    help|--help|-h)
+        echo "=========================================="
+        echo "TAD Framework CLI v1.2"
+        echo "=========================================="
+        echo ""
+        echo "Usage: tad <command>"
+        echo ""
+        echo "Commands:"
+        echo "  ${BLUE}version${NC}        Show TAD version"
+        echo "  ${BLUE}doctor${NC}         Run health check"
+        echo "  ${BLUE}upgrade${NC}        Upgrade to latest version"
+        echo "  ${BLUE}help${NC}           Show this help message"
+        echo ""
+        echo "For agent activation:"
+        echo "  ${BLUE}/alex${NC}          Activate Agent A (Solution Lead)"
+        echo "  ${BLUE}/blake${NC}         Activate Agent B (Execution Master)"
+        echo "  ${BLUE}/tad${NC}           Show main menu"
+        echo ""
+        echo "Documentation:"
+        echo "  GitHub: https://github.com/Sheldon-92/TAD"
+        echo "  MCP Guide: .tad/MCP_USAGE_GUIDE.md"
+        echo ""
+        ;;
+
+    *)
+        if [ -z "$1" ]; then
+            # No command provided, show brief help
+            echo "TAD Framework v$(cat "$TAD_ROOT/.tad/version.txt" 2>/dev/null || echo "?")"
+            echo "Type 'tad help' for usage information"
+        else
+            echo -e "${RED}Unknown command: $1${NC}"
+            echo "Type 'tad help' for available commands"
+            exit 1
+        fi
+        ;;
+esac

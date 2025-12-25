@@ -1,0 +1,737 @@
+# TAD Configuration v3.0 - 融合BMAD强制机制的增强版
+method: TAD
+version: 3.0
+description: Triangle Agent Development - 强化版配置系统
+last_updated: 2025-01-28
+
+# ==================== 文档管理系统 ====================
+document_management:
+  manifest_file: .tad/manifest.yaml
+  naming_convention:
+    format: "{timestamp}_{version}_{task_id}_{type}_{status}.md"
+    example: "20250128_1430_v1.2_TASK001_design_draft.md"
+
+  structure:
+    active/           # 当前活跃任务
+      ├── tasks/      # 任务追踪
+      ├── designs/    # 设计文档
+      └── handoffs/   # 交接文档
+    archive/          # 已完成归档
+      ├── by_date/    # 按日期
+      ├── by_task/    # 按任务
+      └── by_version/ # 按版本
+    context/          # 项目长期信息
+    working/          # 工作中文档
+
+  version_control:
+    enabled: true
+    auto_increment: true
+    hash_verification: true
+    change_tracking: true
+
+  mandatory_sections:
+    header:
+      - task_id: "TASK-{YYYY}{MM}{DD}-{seq}"
+      - version: "v{major}.{minor}.{patch}"
+      - status: "draft|review|approved|implemented|archived"
+      - owner: "{agent_name}"
+      - created: "{timestamp}"
+      - modified: "{timestamp}"
+      - previous_version: "{link_to_previous}"
+
+    metadata:
+      - hash: "{file_hash}"
+      - modified_by: "{agent_name}"
+      - change_summary: "{summary}"
+
+# ==================== Agent 激活协议 ====================
+activation_protocol:
+  # 强制4步激活流程（借鉴BMAD）
+  mandatory_steps:
+    step1:
+      name: "身份加载"
+      action: "读取完整agent定义文件"
+      verification: "确认文件hash匹配"
+
+    step2:
+      name: "身份确认"
+      action: "采用定义的persona"
+      output: "我是{agent_name}，{role}"
+
+    step3:
+      name: "配置加载"
+      action: "加载.tad/config-v3.yaml"
+      verification: "显示加载的配置版本"
+
+    step4:
+      name: "能力展示"
+      action: "自动运行*help命令"
+      output: "显示所有可用命令和能力"
+
+  violation_detection:
+    - "跳过任何步骤 → 警告并重新激活"
+    - "身份混淆 → 立即纠正"
+    - "未显示help → 自动补充"
+
+# ==================== 核心三角模型（增强版） ====================
+triangle:
+  human:
+    role: Value Guardian
+    responsibilities:
+      - 定义价值和需求
+      - 验证交付价值
+      - 做关键决策
+    commands:
+      - "*status": 查看当前状态
+      - "*task": 查看任务列表
+      - "*approve": 批准设计/实施
+
+  agent_a:
+    name: Alex
+    role: Solution Lead
+    terminal: 1
+
+    # 新增：强制职责
+    mandatory_responsibilities:
+      - 深度需求挖掘（不少于3轮确认）
+      - 设计方案（必须调用相关sub-agents）
+      - 创建handoff文档
+      - 质量审查（不能跳过）
+
+    # 新增：禁止行为（关键！）
+    forbidden_actions:
+      - "直接编写实现代码"
+      - "执行测试脚本"
+      - "部署或运行应用"
+      - "修改Agent B的代码"
+      - "跳过需求确认"
+
+    # 新增：强制交接触发词
+    handoff_triggers:
+      keywords: ["实现", "执行", "编码", "部署", "测试运行"]
+      action: |
+        检测到执行类关键词！
+        立即停止，执行以下操作：
+        1. 完成当前设计文档
+        2. 创建handoff文档
+        3. 生成Agent B的执行prompt
+        4. 提示用户转交给Blake
+
+    # 新增：命令系统
+    commands:
+      - "*plan <requirement>": "创建sprint计划"
+      - "*design <feature>": "生成技术设计"
+      - "*review <implementation>": "审查代码质量"
+      - "*handoff": "生成交接文档"
+      - "*status": "显示当前状态"
+      - "*help": "显示所有命令"
+
+  agent_b:
+    name: Blake
+    role: Execution Master
+    terminal: 2
+
+    mandatory_responsibilities:
+      - 验证设计完整性
+      - 调用parallel-coordinator（复杂任务必须）
+      - 执行测试验证
+      - 生成执行报告
+
+    forbidden_actions:
+      - "修改需求文档"
+      - "更改架构设计"
+      - "跳过测试"
+      - "忽略设计规范"
+
+    commands:
+      - "*execute <handoff>": "执行交接任务"
+      - "*test": "运行测试套件"
+      - "*deploy": "部署到环境"
+      - "*report": "生成执行报告"
+      - "*parallel <tasks>": "并行执行任务"
+
+# ==================== Sub-agents 强制调用机制 ====================
+subagents_enforcement:
+  # 强制调用规则
+  mandatory_invocation_rules:
+    agent_a:
+      需求分析:
+        must_call: ["product-expert"]
+        violation: "未调用product-expert进行需求分析"
+
+      架构设计:
+        must_call: ["backend-architect"]
+        violation: "未调用backend-architect进行架构设计"
+
+      质量审查:
+        must_call: ["code-reviewer"]
+        violation: "未调用code-reviewer进行质量审查"
+
+    agent_b:
+      复杂任务:
+        condition: "任务包含3个以上组件"
+        must_call: ["parallel-coordinator"]
+        violation: "复杂任务未使用parallel-coordinator"
+
+      问题修复:
+        condition: "遇到bug或错误"
+        must_call: ["bug-hunter"]
+        violation: "未调用bug-hunter诊断问题"
+
+      测试执行:
+        condition: "完成实现后"
+        must_call: ["test-runner"]
+        violation: "未调用test-runner验证实现"
+
+  # 调用验证机制
+  invocation_verification:
+    log_format: "[{timestamp}] {agent} called {subagent} for {task}"
+    verification_points:
+      - pre_task: "检查是否需要sub-agent"
+      - during_task: "确认sub-agent被调用"
+      - post_task: "验证sub-agent完成工作"
+
+  # 违规处理
+  violation_handling:
+    detection: "自动检测未调用必需的sub-agents"
+    warning: "⚠️ VIOLATION: {violation_message}"
+    correction: "立即调用缺失的sub-agent"
+    prevention: "阻止继续执行直到调用"
+
+# ==================== 深度需求挖掘流程（借鉴BMAD的elicit） ====================
+requirement_elicitation:
+  # 强制多轮确认机制
+  mandatory_rounds:
+    minimum: 3
+    maximum: 5
+
+  round1_understanding:
+    agent_action:
+      - "复述用户需求"
+      - "识别关键价值点"
+      - "列出初步假设"
+    user_interaction:
+      format: "1-9选项格式"
+      options:
+        1: "继续下一步"
+        2: "澄清需求"
+        3: "提供更多背景"
+        4: "纠正理解偏差"
+        5: "添加约束条件"
+        6: "明确优先级"
+        7: "提供示例"
+        8: "讨论替代方案"
+        9: "重新开始"
+
+  round2_exploration:
+    agent_action:
+      - "展示理解的需求"
+      - "提出clarifying questions"
+      - "识别潜在风险"
+    must_check:
+      - "历史代码是否存在"
+      - "类似功能是否实现过"
+      - "是否有可复用组件"
+
+  round3_confirmation:
+    agent_action:
+      - "展示完整需求理解"
+      - "列出关键决策点"
+      - "确认验收标准"
+    final_check:
+      format: "必须获得明确确认"
+      options:
+        - "✅ 确认，开始设计"
+        - "🔄 需要调整"
+        - "❌ 重新分析"
+
+  # 浅层响应检测
+  shallow_response_detection:
+    indicators:
+      - "立即生成技术方案"
+      - "跳过价值确认"
+      - "没有提出问题"
+      - "少于3轮交互"
+    action: "强制重新进入需求挖掘流程"
+
+# ==================== 场景工作流（增强版） ====================
+scenarios:
+  # 每个场景都有强制要求
+  new_project:
+    trigger: "没有任何代码，从零开始"
+
+    agent_a_workflow:
+      phase1_requirements:
+        mandatory_subagents: ["product-expert"]
+        minimum_time: "30 minutes"
+        deliverable: ".tad/active/requirements_v{n}.md"
+        user_confirmation: required
+
+      phase2_architecture:
+        mandatory_subagents: ["backend-architect", "api-designer"]
+        deliverable: ".tad/active/architecture_v{n}.md"
+        review_required: true
+
+      phase3_handoff:
+        content:
+          - "完整需求文档"
+          - "架构设计图"
+          - "实施步骤"
+          - "验收标准"
+        format: ".tad/active/handoffs/project_init_{timestamp}.md"
+
+    agent_b_workflow:
+      phase1_validation:
+        check: "验证handoff完整性"
+        missing_info_action: "返回Agent A补充"
+
+      phase2_execution:
+        mandatory_subagents: ["parallel-coordinator", "devops-engineer"]
+        parallel_tasks:
+          - "项目结构创建"
+          - "基础配置设置"
+          - "开发环境搭建"
+
+      phase3_testing:
+        mandatory_subagents: ["test-runner"]
+        coverage_requirement: ">80%"
+
+  bug_fix:
+    trigger: "发现问题需要修复"
+
+    agent_a_workflow:
+      phase1_analysis:
+        mandatory_subagents: ["bug-hunter"]
+        deliverable: ".tad/active/tasks/bug_analysis_{id}.md"
+        must_include:
+          - "问题重现步骤"
+          - "根因分析"
+          - "影响范围"
+          - "修复方案"
+
+    agent_b_workflow:
+      phase1_reproduce:
+        action: "必须先重现问题"
+        failure_action: "返回Agent A重新分析"
+
+      phase2_fix:
+        mandatory_subagents: ["bug-hunter", "test-runner"]
+        regression_test: required
+
+# ==================== 质量门控（Quality Gates） ====================
+quality_gates:
+  # Agent A 质量门控
+  agent_a_gates:
+    gate1_requirement:
+      name: "需求完整性"
+      checks:
+        - "用户价值明确"
+        - "验收标准清晰"
+        - "至少3轮确认"
+      violation_action: "阻止进入设计阶段"
+
+    gate2_design:
+      name: "设计完整性"
+      checks:
+        - "所有组件都有设计"
+        - "数据流完整"
+        - "错误处理明确"
+      violation_action: "返回补充设计"
+
+    gate3_handoff:
+      name: "交接完整性"
+      checks:
+        - "实施步骤详细"
+        - "依赖关系清晰"
+        - "测试用例提供"
+      violation_action: "禁止提交给Agent B"
+
+  # Agent B 质量门控
+  agent_b_gates:
+    gate1_prereq:
+      name: "前置条件"
+      checks:
+        - "handoff文档存在"
+        - "设计已批准"
+        - "环境已就绪"
+      violation_action: "拒绝执行"
+
+    gate2_implementation:
+      name: "实现质量"
+      checks:
+        - "代码可编译"
+        - "函数都存在"
+        - "类型检查通过"
+      violation_action: "立即修复"
+
+    gate3_verification:
+      name: "验证完整性"
+      checks:
+        - "测试全部通过"
+        - "覆盖率达标"
+        - "性能符合要求"
+      violation_action: "禁止交付"
+
+# ==================== 交互协议 ====================
+interaction_protocol:
+  # 用户交互格式（借鉴BMAD）
+  user_interaction_format:
+    standard: "1-9数字选项"
+    example: |
+      请选择：
+      1. 继续下一步
+      2. 提供更多信息
+      3. 修改当前内容
+      4. 查看其他选项
+      5. 深入讨论
+      6. 返回上一步
+      7. 保存并暂停
+      8. 查看帮助
+      9. 退出
+
+  # Agent间交互协议
+  agent_handoff_protocol:
+    format: "标准化markdown文档"
+    required_sections:
+      - "## 任务概述"
+      - "## 背景上下文"
+      - "## 具体要求"
+      - "## 设计规范"
+      - "## 实施步骤"
+      - "## 验收标准"
+      - "## 注意事项"
+
+  # 违规提示
+  violation_alerts:
+    format: |
+      ⚠️ VIOLATION DETECTED ⚠️
+      Type: {violation_type}
+      Agent: {agent_name}
+      Action: {forbidden_action}
+      Correction: {required_correction}
+
+# ==================== 任务管理系统 ====================
+task_management:
+  task_id_format: "TASK-{YYYY}{MM}{DD}-{3位序号}"
+
+  task_states:
+    - "pending": "待开始"
+    - "in_progress": "进行中"
+    - "blocked": "被阻塞"
+    - "review": "审查中"
+    - "completed": "已完成"
+    - "archived": "已归档"
+
+  task_tracking:
+    location: ".tad/active/tasks/"
+    format: "{task_id}_tracking.yaml"
+    required_fields:
+      - task_id
+      - title
+      - status
+      - owner
+      - created
+      - updated
+      - dependencies
+      - blockers
+      - deliverables
+
+  dependency_management:
+    check_before_start: true
+    block_if_unmet: true
+    alert_on_circular: true
+
+# ==================== 监控与报告 ====================
+monitoring:
+  violation_log:
+    location: ".tad/logs/violations.log"
+    format: "[{timestamp}] {agent} - {violation} - {action_taken}"
+
+  subagent_usage_log:
+    location: ".tad/logs/subagent_usage.log"
+    format: "[{timestamp}] {agent} → {subagent} for {task}"
+
+  performance_metrics:
+    track:
+      - "需求确认轮次"
+      - "设计迭代次数"
+      - "sub-agent调用率"
+      - "违规次数"
+      - "返工率"
+
+  daily_report:
+    generate: true
+    location: ".tad/reports/daily_{date}.md"
+    include:
+      - "任务完成情况"
+      - "违规统计"
+      - "sub-agent使用统计"
+      - "质量门控通过率"
+
+# ==================== 命令系统 ====================
+command_system:
+  prefix: "*"
+
+  global_commands:
+    - "*help": "显示所有可用命令"
+    - "*status": "显示当前状态"
+    - "*tasks": "显示任务列表"
+    - "*history": "显示历史记录"
+    - "*config": "显示当前配置"
+
+  agent_specific_commands:
+    agent_a:
+      - "*analyze <requirement>": "深度需求分析"
+      - "*design <feature>": "创建技术设计"
+      - "*review <code>": "代码审查"
+      - "*handoff": "生成交接文档"
+      - "*call <subagent>": "调用sub-agent"
+
+    agent_b:
+      - "*execute <handoff>": "执行交接任务"
+      - "*parallel <tasks>": "并行执行"
+      - "*test": "运行测试"
+      - "*deploy": "部署应用"
+      - "*report": "生成报告"
+
+# ==================== MCP 工具集成 (v1.2 新增) ====================
+mcp_tools:
+  enabled: true
+  version: "1.2"
+  registry_file: ".tad/mcp-registry.yaml"
+  description: "MCP tools enhance TAD agents but are NOT required for core functionality"
+
+  # Agent A (Alex) - Solution Lead MCP 配置
+  agent_a_tools:
+    core_layer:
+      tools: ["context7", "sequential-thinking", "memory-bank", "brave-search"]
+      description: "核心层工具,增强需求分析和设计能力"
+
+    auto_trigger:
+      context7:
+        description: "检测到框架/库关键词时自动调用最新文档"
+        keywords:
+          - "Next.js"
+          - "React"
+          - "Vue"
+          - "Tailwind"
+          - "TypeScript"
+          - "Supabase"
+          - "框架"
+          - "库"
+        action: "auto_call"
+        timing: "Round 1-2 之间"
+
+      memory-bank:
+        description: "需求分析开始前推荐调用项目历史"
+        action: "recommend"
+        timing:
+          - "Round 0 (需求分析开始)"
+          - "设计阶段开始"
+          - "回顾历史决策时"
+
+      sequential-thinking:
+        description: "复杂问题分解时建议使用"
+        keywords: ["复杂", "架构", "系统设计", "算法"]
+        action: "suggest"
+
+      brave-search:
+        description: "技术不确定时建议调研"
+        action: "suggest"
+        timing: ["Round 2 技术研究"]
+
+    workflow_integration:
+      requirement_analysis:
+        - "Round 0: RECOMMEND memory-bank"
+        - "Round 1-2: AUTO-TRIGGER context7 on framework mention"
+        - "Round 2: SUGGEST brave-search if technical uncertainty"
+        - "Round 2.5: AUTO-DETECT project type and recommend Project MCPs"
+
+      design_phase:
+        - "USE context7 for latest best practices"
+        - "USE sequential-thinking for complex architecture"
+        - "USE memory-bank to review past decisions"
+
+      handoff_creation:
+        - "INCLUDE MCP tools used in handoff document"
+        - "RECOMMEND Blake which Project MCPs to use"
+
+    forbidden_mcp_tools:
+      description: "Alex 不应使用的 MCP (Blake's domain)"
+      list:
+        - "filesystem"  # Blake 的文件操作
+        - "git"         # Blake 的版本控制
+        - "docker"      # Blake 的容器管理
+        - "kubernetes"  # Blake 的部署
+        - "terminal"    # Blake 的命令执行
+
+  # Agent B (Blake) - Execution Master MCP 配置
+  agent_b_tools:
+    core_layer:
+      tools: ["filesystem", "git", "github"]
+      required: ["filesystem", "git"]
+      description: "核心层工具,实现开发必备"
+
+    project_layer:
+      description: "根据 Alex 在 Round 2.5 推荐的项目类型工具"
+      examples:
+        web_fullstack: ["supabase", "playwright", "vercel", "react-mcp"]
+        data_science: ["jupyter", "pandas-mcp", "antv-chart", "postgres-mcp-pro"]
+        machine_learning: ["jupyter", "optuna", "huggingface", "zenml"]
+        devops: ["kubernetes", "docker", "aws", "terminal"]
+        creative: ["figma", "video-audio-mcp", "adobe-mcp"]
+
+    auto_use:
+      filesystem:
+        description: "所有文件创建、读取、修改操作自动使用"
+        operations: ["create", "read", "update", "delete", "list"]
+
+      git:
+        description: "所有版本控制操作自动使用"
+        operations: ["commit", "branch", "merge", "status"]
+
+      context7:
+        description: "实现框架代码时自动触发"
+        trigger: "when implementing framework-specific code"
+
+    workflow_integration:
+      pre_implementation:
+        - "VERIFY filesystem MCP is active"
+        - "VERIFY git MCP is active"
+        - "CHECK project MCPs from handoff recommendation"
+        - "HALT if required MCPs unavailable"
+
+      during_implementation:
+        - "AUTO-USE filesystem for all file operations"
+        - "AUTO-USE git for version control"
+        - "AUTO-TRIGGER context7 when implementing framework code"
+        - "USE project MCPs as recommended by Alex"
+
+      testing_phase:
+        - "USE playwright MCP for E2E tests (if available)"
+        - "USE terminal MCP for test execution"
+
+      deployment:
+        - "USE vercel/aws MCP for deployment (if configured)"
+        - "USE kubernetes/docker MCP for container deployment"
+
+    pre_flight_checks:
+      description: "Run before *develop command"
+      checklist:
+        - check: "filesystem MCP active"
+          action_if_fail: "HALT - Cannot proceed without filesystem access"
+          severity: "blocking"
+
+        - check: "git MCP active"
+          action_if_fail: "HALT - Cannot proceed without version control"
+          severity: "blocking"
+
+        - check: "handoff document exists"
+          action_if_fail: "HALT - Cannot start without handoff from Alex"
+          severity: "blocking"
+
+        - check: "project MCPs availability"
+          action_if_fail: "WARN - Suggest installing recommended MCPs"
+          severity: "warning"
+
+  # MCP 使用强制机制
+  enforcement:
+    mode: "recommend"
+    description: "推荐模式 - MCP 是增强,不是必需"
+
+    violation_detection:
+      enabled: true
+      checks:
+        - "Blake 尝试开始 *develop 但 filesystem MCP 不可用"
+        - "Blake 尝试开始 *develop 但 git MCP 不可用"
+        - "Alex 调用了 filesystem/git MCP (violation - Blake's domain)"
+
+    violation_action: "warn"
+    violation_format: |
+      ⚠️ MCP VIOLATION ⚠️
+      Agent: {agent_name}
+      Issue: {violation_description}
+      Action: {required_correction}
+
+    non_blocking:
+      description: "MCP 工具不可用时不阻塞原有 TAD 工作流"
+      fallback: "使用 Claude Code 内置能力继续执行"
+      log: "记录 MCP 不可用情况供后续改进"
+
+  # MCP 安全配置
+  security:
+    auto_approve_readonly: true
+    description: "只读操作自动批准,危险操作需确认"
+
+    auto_approve_safe:
+      - "git status"
+      - "git diff"
+      - "git log"
+      - "filesystem read operations"
+      - "context7 documentation queries"
+      - "memory-bank history queries"
+
+    always_confirm:
+      - "git push"
+      - "git push --force"
+      - "rm -rf"
+      - "filesystem delete operations"
+      - "docker rm"
+      - "kubectl delete"
+      - "vercel deploy --prod"
+      - "aws operations"
+
+  # Project Type Detection Integration
+  project_detection:
+    enabled: true
+    timing: "Round 2.5 (after tech stack confirmed)"
+    confidence_threshold:
+      web_fullstack: 0.7
+      data_science: 0.6
+      machine_learning: 0.8
+      devops: 0.7
+      creative: 0.7
+
+    detection_method:
+      - "Keywords in user responses"
+      - "File patterns in existing codebase"
+      - "Tech stack preferences"
+
+    action_on_detection:
+      - "Display project type and confidence"
+      - "Show recommended Project-Layer MCPs"
+      - "Offer installation options (0-2)"
+      - "Record user decision"
+      - "Continue to Round 3 regardless of choice"
+
+  # MCP 效率提升追踪
+  efficiency_tracking:
+    enabled: true
+    metrics:
+      - "MCP tools used per task"
+      - "Time saved estimates"
+      - "Documentation accuracy improvements"
+      - "Code quality improvements"
+
+    reporting:
+      location: ".tad/logs/mcp_usage.log"
+      format: "[{timestamp}] {agent} used {mcp_tool} for {task} - Estimated time saved: {minutes}m"
+
+  # 重要提醒
+  important_notes:
+    - "MCP 工具是 ENHANCEMENTS,不是 REQUIREMENTS"
+    - "所有原有 TAD 工作流在没有 MCP 的情况下仍完全可用"
+    - "MCP 工具失败时不应阻止进度"
+    - "始终通知用户正在使用哪些 MCP 工具"
+    - "MCP 故障应记录但不影响核心功能"
+    - "filesystem 和 git 是 Blake 的必需 MCP,其他都是可选"
+
+# ==================== YOLO模式（可选） ====================
+yolo_mode:
+  enabled: false
+  activation: "#yolo"
+  warning: "⚠️ YOLO模式会跳过部分验证步骤，仅在紧急情况使用"
+  restrictions:
+    - "仍需遵守角色边界"
+    - "不能跳过关键质量门控"
+    - "必须记录原因"

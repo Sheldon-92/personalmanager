@@ -1,0 +1,1456 @@
+# TAD Configuration v1.3 - Evidence-Based Development
+method: TAD
+version: 1.3.0
+description: Triangle Agent Development - 证据式开发系统
+last_updated: 2025-11-25
+
+# ==================== 文档管理系统 ====================
+document_management:
+  manifest_file: .tad/manifest.yaml
+  naming_convention:
+    format: "{timestamp}_{version}_{task_id}_{type}_{status}.md"
+    example: "20250128_1430_v1.2_TASK001_design_draft.md"
+
+  structure:
+    active:           # 当前活跃任务
+      - tasks         # 任务追踪
+      - designs       # 设计文档
+      - handoffs      # 交接文档
+    archive:          # 已完成归档
+      - by_date       # 按日期
+      - by_task       # 按任务
+      - by_version    # 按版本
+    context: "项目长期信息"
+    working: "工作中文档"
+
+  version_control:
+    enabled: true
+    auto_increment: true
+    hash_verification: true
+    change_tracking: true
+
+  mandatory_sections:
+    header:
+      - task_id: "TASK-{YYYY}{MM}{DD}-{seq}"
+      - version: "v{major}.{minor}.{patch}"
+      - status: "draft|review|approved|implemented|archived"
+      - owner: "{agent_name}"
+      - created: "{timestamp}"
+      - modified: "{timestamp}"
+      - previous_version: "{link_to_previous}"
+
+    metadata:
+      - hash: "{file_hash}"
+      - modified_by: "{agent_name}"
+      - change_summary: "{summary}"
+
+# ==================== Agent 激活协议 ====================
+activation_protocol:
+  # 强制4步激活流程（借鉴BMAD）
+  mandatory_steps:
+    step1:
+      name: "身份加载"
+      action: "读取完整agent定义文件"
+      verification: "确认文件hash匹配"
+
+    step2:
+      name: "身份确认"
+      action: "采用定义的persona"
+      output: "我是{agent_name}，{role}"
+
+    step3:
+      name: "配置加载"
+      action: "加载.tad/config-v3.yaml"
+      verification: "显示加载的配置版本"
+
+    step4:
+      name: "能力展示"
+      action: "自动运行*help命令"
+      output: "显示所有可用命令和能力"
+
+  violation_detection:
+    - "跳过任何步骤 → 警告并重新激活"
+    - "身份混淆 → 立即纠正"
+    - "未显示help → 自动补充"
+
+# ==================== 核心三角模型（增强版） ====================
+triangle:
+  human:
+    role: Value Guardian
+    responsibilities:
+      - 定义价值和需求
+      - 验证交付价值
+      - 做关键决策
+    commands:
+      - "*status": 查看当前状态
+      - "*task": 查看任务列表
+      - "*approve": 批准设计/实施
+
+  agent_a:
+    name: Alex
+    role: Solution Lead
+    terminal: 1
+
+    # 新增：强制职责
+    mandatory_responsibilities:
+      - 深度需求挖掘（不少于3轮确认）
+      - 设计方案（必须调用相关sub-agents）
+      - 创建handoff文档
+      - 质量审查（不能跳过）
+
+    # 新增：禁止行为（关键！）
+    forbidden_actions:
+      - "直接编写实现代码"
+      - "执行测试脚本"
+      - "部署或运行应用"
+      - "修改Agent B的代码"
+      - "跳过需求确认"
+
+    # 新增：强制交接触发词
+    handoff_triggers:
+      keywords: ["实现", "执行", "编码", "部署", "测试运行"]
+      action: |
+        检测到执行类关键词！
+        立即停止，执行以下操作：
+        1. 完成当前设计文档
+        2. 创建handoff文档
+        3. 生成Agent B的执行prompt
+        4. 提示用户转交给Blake
+
+    # 新增：命令系统
+    commands:
+      - "*plan <requirement>": "创建sprint计划"
+      - "*design <feature>": "生成技术设计"
+      - "*review <implementation>": "审查代码质量"
+      - "*handoff": "生成交接文档"
+      - "*status": "显示当前状态"
+      - "*help": "显示所有命令"
+
+  agent_b:
+    name: Blake
+    role: Execution Master
+    terminal: 2
+
+    mandatory_responsibilities:
+      - 验证设计完整性
+      - 调用parallel-coordinator（复杂任务必须）
+      - 执行测试验证
+      - 生成执行报告
+
+    forbidden_actions:
+      - "修改需求文档"
+      - "更改架构设计"
+      - "跳过测试"
+      - "忽略设计规范"
+
+    commands:
+      - "*execute <handoff>": "执行交接任务"
+      - "*test": "运行测试套件"
+      - "*deploy": "部署到环境"
+      - "*report": "生成执行报告"
+      - "*parallel <tasks>": "并行执行任务"
+
+# ==================== Sub-agents 强制调用机制 ====================
+subagents_enforcement:
+  # 强制调用规则
+  mandatory_invocation_rules:
+    agent_a:
+      需求分析:
+        must_call: ["product-expert"]
+        violation: "未调用product-expert进行需求分析"
+
+      架构设计:
+        must_call: ["backend-architect"]
+        violation: "未调用backend-architect进行架构设计"
+
+      质量审查:
+        must_call: ["code-reviewer"]
+        violation: "未调用code-reviewer进行质量审查"
+
+    agent_b:
+      复杂任务:
+        condition: "任务包含3个以上组件"
+        must_call: ["parallel-coordinator"]
+        violation: "复杂任务未使用parallel-coordinator"
+
+      问题修复:
+        condition: "遇到bug或错误"
+        must_call: ["bug-hunter"]
+        violation: "未调用bug-hunter诊断问题"
+
+      测试执行:
+        condition: "完成实现后"
+        must_call: ["test-runner"]
+        violation: "未调用test-runner验证实现"
+
+  # 调用验证机制
+  invocation_verification:
+    log_format: "[{timestamp}] {agent} called {subagent} for {task}"
+    verification_points:
+      - pre_task: "检查是否需要sub-agent"
+      - during_task: "确认sub-agent被调用"
+      - post_task: "验证sub-agent完成工作"
+
+  # 违规处理
+  violation_handling:
+    detection: "自动检测未调用必需的sub-agents"
+    warning: "⚠️ VIOLATION: {violation_message}"
+    correction: "立即调用缺失的sub-agent"
+    prevention: "阻止继续执行直到调用"
+
+# ==================== 深度需求挖掘流程（借鉴BMAD的elicit） ====================
+requirement_elicitation:
+  # 强制多轮确认机制
+  mandatory_rounds:
+    minimum: 3
+    maximum: 5
+
+  round1_understanding:
+    agent_action:
+      - "复述用户需求"
+      - "识别关键价值点"
+      - "列出初步假设"
+    user_interaction:
+      format: "1-9选项格式"
+      options:
+        1: "继续下一步"
+        2: "澄清需求"
+        3: "提供更多背景"
+        4: "纠正理解偏差"
+        5: "添加约束条件"
+        6: "明确优先级"
+        7: "提供示例"
+        8: "讨论替代方案"
+        9: "重新开始"
+
+  round2_exploration:
+    agent_action:
+      - "展示理解的需求"
+      - "提出clarifying questions"
+      - "识别潜在风险"
+    must_check:
+      - "历史代码是否存在"
+      - "类似功能是否实现过"
+      - "是否有可复用组件"
+
+  round3_confirmation:
+    agent_action:
+      - "展示完整需求理解"
+      - "列出关键决策点"
+      - "确认验收标准"
+    final_check:
+      format: "必须获得明确确认"
+      options:
+        - "✅ 确认，开始设计"
+        - "🔄 需要调整"
+        - "❌ 重新分析"
+
+  # 浅层响应检测
+  shallow_response_detection:
+    indicators:
+      - "立即生成技术方案"
+      - "跳过价值确认"
+      - "没有提出问题"
+      - "少于3轮交互"
+    action: "强制重新进入需求挖掘流程"
+
+# ==================== 场景工作流（增强版） ====================
+scenarios:
+  # 每个场景都有强制要求
+  new_project:
+    trigger: "没有任何代码，从零开始"
+
+    agent_a_workflow:
+      phase1_requirements:
+        mandatory_subagents: ["product-expert"]
+        minimum_time: "30 minutes"
+        deliverable: ".tad/active/requirements_v{n}.md"
+        user_confirmation: required
+
+      phase2_architecture:
+        mandatory_subagents: ["backend-architect", "api-designer"]
+        deliverable: ".tad/active/architecture_v{n}.md"
+        review_required: true
+
+      phase3_handoff:
+        content:
+          - "完整需求文档"
+          - "架构设计图"
+          - "实施步骤"
+          - "验收标准"
+        format: ".tad/active/handoffs/project_init_{timestamp}.md"
+
+    agent_b_workflow:
+      phase1_validation:
+        check: "验证handoff完整性"
+        missing_info_action: "返回Agent A补充"
+
+      phase2_execution:
+        mandatory_subagents: ["parallel-coordinator", "devops-engineer"]
+        parallel_tasks:
+          - "项目结构创建"
+          - "基础配置设置"
+          - "开发环境搭建"
+
+      phase3_testing:
+        mandatory_subagents: ["test-runner"]
+        coverage_requirement: ">80%"
+
+  bug_fix:
+    trigger: "发现问题需要修复"
+
+    agent_a_workflow:
+      phase1_analysis:
+        mandatory_subagents: ["bug-hunter"]
+        deliverable: ".tad/active/tasks/bug_analysis_{id}.md"
+        must_include:
+          - "问题重现步骤"
+          - "根因分析"
+          - "影响范围"
+          - "修复方案"
+
+    agent_b_workflow:
+      phase1_reproduce:
+        action: "必须先重现问题"
+        failure_action: "返回Agent A重新分析"
+
+      phase2_fix:
+        mandatory_subagents: ["bug-hunter", "test-runner"]
+        regression_test: required
+
+# ==================== 质量门控（Quality Gates） ====================
+quality_gates:
+  # Agent A 质量门控
+  agent_a_gates:
+    gate1_requirement:
+      name: "需求完整性"
+      checks:
+        - "用户价值明确"
+        - "验收标准清晰"
+        - "至少3轮确认"
+      violation_action: "阻止进入设计阶段"
+
+    gate2_design:
+      name: "设计完整性"
+      checks:
+        - "所有组件都有设计"
+        - "数据流完整"
+        - "错误处理明确"
+      violation_action: "返回补充设计"
+
+    gate3_handoff:
+      name: "交接完整性"
+      checks:
+        - "实施步骤详细"
+        - "依赖关系清晰"
+        - "测试用例提供"
+      violation_action: "禁止提交给Agent B"
+
+  # Agent B 质量门控
+  agent_b_gates:
+    gate1_prereq:
+      name: "前置条件"
+      checks:
+        - "handoff文档存在"
+        - "设计已批准"
+        - "环境已就绪"
+      violation_action: "拒绝执行"
+
+    gate2_implementation:
+      name: "实现质量"
+      checks:
+        - "代码可编译"
+        - "函数都存在"
+        - "类型检查通过"
+      violation_action: "立即修复"
+
+    gate3_verification:
+      name: "验证完整性"
+      checks:
+        - "测试全部通过"
+        - "覆盖率达标"
+        - "性能符合要求"
+      violation_action: "禁止交付"
+
+# ==================== 交互协议 ====================
+interaction_protocol:
+  # 用户交互格式（借鉴BMAD）
+  user_interaction_format:
+    standard: "1-9数字选项"
+    example: |
+      请选择：
+      1. 继续下一步
+      2. 提供更多信息
+      3. 修改当前内容
+      4. 查看其他选项
+      5. 深入讨论
+      6. 返回上一步
+      7. 保存并暂停
+      8. 查看帮助
+      9. 退出
+
+  # Agent间交互协议
+  agent_handoff_protocol:
+    format: "标准化markdown文档"
+    required_sections:
+      - "## 任务概述"
+      - "## 背景上下文"
+      - "## 具体要求"
+      - "## 设计规范"
+      - "## 实施步骤"
+      - "## 验收标准"
+      - "## 注意事项"
+
+  # 违规提示
+  violation_alerts:
+    format: |
+      ⚠️ VIOLATION DETECTED ⚠️
+      Type: {violation_type}
+      Agent: {agent_name}
+      Action: {forbidden_action}
+      Correction: {required_correction}
+
+# ==================== 任务管理系统 ====================
+task_management:
+  task_id_format: "TASK-{YYYY}{MM}{DD}-{3位序号}"
+
+  task_states:
+    - "pending": "待开始"
+    - "in_progress": "进行中"
+    - "blocked": "被阻塞"
+    - "review": "审查中"
+    - "completed": "已完成"
+    - "archived": "已归档"
+
+  task_tracking:
+    location: ".tad/active/tasks/"
+    format: "{task_id}_tracking.yaml"
+    required_fields:
+      - task_id
+      - title
+      - status
+      - owner
+      - created
+      - updated
+      - dependencies
+      - blockers
+      - deliverables
+
+  dependency_management:
+    check_before_start: true
+    block_if_unmet: true
+    alert_on_circular: true
+
+# ==================== 监控与报告 ====================
+monitoring:
+  violation_log:
+    location: ".tad/logs/violations.log"
+    format: "[{timestamp}] {agent} - {violation} - {action_taken}"
+
+  subagent_usage_log:
+    location: ".tad/logs/subagent_usage.log"
+    format: "[{timestamp}] {agent} → {subagent} for {task}"
+
+  performance_metrics:
+    track:
+      - "需求确认轮次"
+      - "设计迭代次数"
+      - "sub-agent调用率"
+      - "违规次数"
+      - "返工率"
+
+  daily_report:
+    generate: true
+    location: ".tad/reports/daily_{date}.md"
+    include:
+      - "任务完成情况"
+      - "违规统计"
+      - "sub-agent使用统计"
+      - "质量门控通过率"
+
+# ==================== 命令系统 ====================
+command_system:
+  prefix: "*"
+
+  global_commands:
+    - "*help": "显示所有可用命令"
+    - "*status": "显示当前状态"
+    - "*tasks": "显示任务列表"
+    - "*history": "显示历史记录"
+    - "*config": "显示当前配置"
+
+  agent_specific_commands:
+    agent_a:
+      - "*analyze <requirement>": "深度需求分析"
+      - "*design <feature>": "创建技术设计"
+      - "*review <code>": "代码审查"
+      - "*handoff": "生成交接文档"
+      - "*call <subagent>": "调用sub-agent"
+
+    agent_b:
+      - "*execute <handoff>": "执行交接任务"
+      - "*parallel <tasks>": "并行执行"
+      - "*test": "运行测试"
+      - "*deploy": "部署应用"
+      - "*report": "生成报告"
+
+# ==================== MCP 工具集成 (v1.2 新增) ====================
+mcp_tools:
+  enabled: true
+  version: "1.2"
+  registry_file: ".tad/mcp-registry.yaml"
+  description: "MCP tools enhance TAD agents but are NOT required for core functionality"
+
+  # Agent A (Alex) - Solution Lead MCP 配置
+  agent_a_tools:
+    core_layer:
+      tools: ["context7", "sequential-thinking", "memory-bank", "brave-search"]
+      description: "核心层工具,增强需求分析和设计能力"
+
+    auto_trigger:
+      context7:
+        description: "检测到框架/库关键词时自动调用最新文档"
+        keywords:
+          - "Next.js"
+          - "React"
+          - "Vue"
+          - "Tailwind"
+          - "TypeScript"
+          - "Supabase"
+          - "框架"
+          - "库"
+        action: "auto_call"
+        timing: "Round 1-2 之间"
+
+      memory-bank:
+        description: "需求分析开始前推荐调用项目历史"
+        action: "recommend"
+        timing:
+          - "Round 0 (需求分析开始)"
+          - "设计阶段开始"
+          - "回顾历史决策时"
+
+      sequential-thinking:
+        description: "复杂问题分解时建议使用"
+        keywords: ["复杂", "架构", "系统设计", "算法"]
+        action: "suggest"
+
+      brave-search:
+        description: "技术不确定时建议调研"
+        action: "suggest"
+        timing: ["Round 2 技术研究"]
+
+    workflow_integration:
+      requirement_analysis:
+        - "Round 0: RECOMMEND memory-bank"
+        - "Round 1-2: AUTO-TRIGGER context7 on framework mention"
+        - "Round 2: SUGGEST brave-search if technical uncertainty"
+        - "Round 2.5: AUTO-DETECT project type and recommend Project MCPs"
+
+      design_phase:
+        - "USE context7 for latest best practices"
+        - "USE sequential-thinking for complex architecture"
+        - "USE memory-bank to review past decisions"
+
+      handoff_creation:
+        - "INCLUDE MCP tools used in handoff document"
+        - "RECOMMEND Blake which Project MCPs to use"
+
+    forbidden_mcp_tools:
+      description: "Alex 不应使用的 MCP (Blake's domain)"
+      list:
+        - "filesystem"  # Blake 的文件操作
+        - "git"         # Blake 的版本控制
+        - "docker"      # Blake 的容器管理
+        - "kubernetes"  # Blake 的部署
+        - "terminal"    # Blake 的命令执行
+
+  # Agent B (Blake) - Execution Master MCP 配置
+  agent_b_tools:
+    core_layer:
+      tools: ["filesystem", "git", "github"]
+      required: ["filesystem", "git"]
+      description: "核心层工具,实现开发必备"
+
+    project_layer:
+      description: "根据 Alex 在 Round 2.5 推荐的项目类型工具"
+      examples:
+        web_fullstack: ["supabase", "playwright", "vercel", "react-mcp"]
+        data_science: ["jupyter", "pandas-mcp", "antv-chart", "postgres-mcp-pro"]
+        machine_learning: ["jupyter", "optuna", "huggingface", "zenml"]
+        devops: ["kubernetes", "docker", "aws", "terminal"]
+        creative: ["figma", "video-audio-mcp", "adobe-mcp"]
+
+    auto_use:
+      filesystem:
+        description: "所有文件创建、读取、修改操作自动使用"
+        operations: ["create", "read", "update", "delete", "list"]
+
+      git:
+        description: "所有版本控制操作自动使用"
+        operations: ["commit", "branch", "merge", "status"]
+
+      context7:
+        description: "实现框架代码时自动触发"
+        trigger: "when implementing framework-specific code"
+
+    workflow_integration:
+      pre_implementation:
+        - "VERIFY filesystem MCP is active"
+        - "VERIFY git MCP is active"
+        - "CHECK project MCPs from handoff recommendation"
+        - "HALT if required MCPs unavailable"
+
+      during_implementation:
+        - "AUTO-USE filesystem for all file operations"
+        - "AUTO-USE git for version control"
+        - "AUTO-TRIGGER context7 when implementing framework code"
+        - "USE project MCPs as recommended by Alex"
+
+      testing_phase:
+        - "USE playwright MCP for E2E tests (if available)"
+        - "USE terminal MCP for test execution"
+
+      deployment:
+        - "USE vercel/aws MCP for deployment (if configured)"
+        - "USE kubernetes/docker MCP for container deployment"
+
+    pre_flight_checks:
+      description: "Run before *develop command"
+      checklist:
+        - check: "filesystem MCP active"
+          action_if_fail: "HALT - Cannot proceed without filesystem access"
+          severity: "blocking"
+
+        - check: "git MCP active"
+          action_if_fail: "HALT - Cannot proceed without version control"
+          severity: "blocking"
+
+        - check: "handoff document exists"
+          action_if_fail: "HALT - Cannot start without handoff from Alex"
+          severity: "blocking"
+
+        - check: "project MCPs availability"
+          action_if_fail: "WARN - Suggest installing recommended MCPs"
+          severity: "warning"
+
+  # MCP 使用强制机制
+  enforcement:
+    mode: "recommend"
+    description: "推荐模式 - MCP 是增强,不是必需"
+
+    violation_detection:
+      enabled: true
+      checks:
+        - "Blake 尝试开始 *develop 但 filesystem MCP 不可用"
+        - "Blake 尝试开始 *develop 但 git MCP 不可用"
+        - "Alex 调用了 filesystem/git MCP (violation - Blake's domain)"
+
+    violation_action: "warn"
+    violation_format: |
+      ⚠️ MCP VIOLATION ⚠️
+      Agent: {agent_name}
+      Issue: {violation_description}
+      Action: {required_correction}
+
+    non_blocking:
+      description: "MCP 工具不可用时不阻塞原有 TAD 工作流"
+      fallback: "使用 Claude Code 内置能力继续执行"
+      log: "记录 MCP 不可用情况供后续改进"
+
+  # MCP 安全配置
+  security:
+    auto_approve_readonly: true
+    description: "只读操作自动批准,危险操作需确认"
+
+    auto_approve_safe:
+      - "git status"
+      - "git diff"
+      - "git log"
+      - "filesystem read operations"
+      - "context7 documentation queries"
+      - "memory-bank history queries"
+
+    always_confirm:
+      - "git push"
+      - "git push --force"
+      - "rm -rf"
+      - "filesystem delete operations"
+      - "docker rm"
+      - "kubectl delete"
+      - "vercel deploy --prod"
+      - "aws operations"
+
+  # Project Type Detection Integration
+  project_detection:
+    enabled: true
+    timing: "Round 2.5 (after tech stack confirmed)"
+    confidence_threshold:
+      web_fullstack: 0.7
+      data_science: 0.6
+      machine_learning: 0.8
+      devops: 0.7
+      creative: 0.7
+
+    detection_method:
+      - "Keywords in user responses"
+      - "File patterns in existing codebase"
+      - "Tech stack preferences"
+
+    action_on_detection:
+      - "Display project type and confidence"
+      - "Show recommended Project-Layer MCPs"
+      - "Offer installation options (0-2)"
+      - "Record user decision"
+      - "Continue to Round 3 regardless of choice"
+
+  # MCP 效率提升追踪
+  efficiency_tracking:
+    enabled: true
+    metrics:
+      - "MCP tools used per task"
+      - "Time saved estimates"
+      - "Documentation accuracy improvements"
+      - "Code quality improvements"
+
+    reporting:
+      location: ".tad/logs/mcp_usage.log"
+      format: "[{timestamp}] {agent} used {mcp_tool} for {task} - Estimated time saved: {minutes}m"
+
+  # 重要提醒
+  important_notes:
+    - "MCP 工具是 ENHANCEMENTS,不是 REQUIREMENTS"
+    - "所有原有 TAD 工作流在没有 MCP 的情况下仍完全可用"
+    - "MCP 工具失败时不应阻止进度"
+    - "始终通知用户正在使用哪些 MCP 工具"
+    - "MCP 故障应记录但不影响核心功能"
+    - "filesystem 和 git 是 Blake 的必需 MCP,其他都是可选"
+
+# ==================== YOLO模式（可选） ====================
+yolo_mode:
+  enabled: false
+  activation: "#yolo"
+  warning: "⚠️ YOLO模式会跳过部分验证步骤，仅在紧急情况使用"
+  restrictions:
+    - "仍需遵守角色边界"
+    - "不能跳过关键质量门控"
+    - "必须记录原因"
+
+# ==================== TAD v1.3 增强配置 ====================
+# 创建日期: 2025-11-25
+# 基于: MenuSnap项目实证分析 + 三份核心文档
+# 目标: 证据式质量保证 + Human可视化赋能 + 持续学习
+
+tad_version: 1.3.0
+enhancement_date: 2025-11-25
+philosophy: "Evidence-Based Triangle Development with Continuous Learning"
+
+# ==================== 证据式验证系统 ====================
+evidence_based_verification:
+  enabled: true
+  description: "所有关键检查点都需要提供可验证的证据"
+
+  required_evidence_types:
+    # 证据类型1：搜索结果
+    search_result:
+      format: "命令 + 结果截图或文本输出"
+      purpose: "证明确实搜索了历史代码"
+      example: |
+        ```bash
+        # 搜索命令
+        grep -r "calculateScore" src/
+
+        # 结果
+        src/lib/utils.ts:42: export function calculateScoreAndReasons(...)
+        ```
+      human_validation: "能看到搜索命令和结果"
+      mandatory_for: ["MQ1"]
+
+    # 证据类型2：代码位置证明
+    code_location:
+      format: "Markdown表格：函数名 | 文件位置 | 行号 | 代码片段 | 验证状态"
+      purpose: "证明函数/组件确实存在"
+      example: |
+        | 函数名 | 位置 | 行号 | 代码片段 | 验证 |
+        |--------|------|------|---------|------|
+        | calculateScore | src/lib/utils.ts | 42 | `export function calculateScore(...)` | ✅ |
+      human_validation: "能看到具体位置和代码，每个都标记✅"
+      mandatory_for: ["MQ2"]
+
+    # 证据类型3：数据流图
+    data_flow_diagram:
+      format: "Mermaid图 + Markdown对照表"
+      purpose: "展示数据从后端到前端的完整流动"
+      example: |
+        ```mermaid
+        graph LR
+          A[Backend API] -->|计算| B[score, reasons, warnings]
+          B -->|传递| C[Frontend]
+          C -->|显示| D[ScoreDisplay]
+          C -->|显示| E[ReasonList]
+          C -->|显示| F[WarningAlert]
+        ```
+
+        | 后端字段 | 前端组件 | 是否显示 | 不显示原因 |
+        |---------|---------|---------|-----------|
+        | score | ScoreDisplay | ✅ | - |
+        | matchReasons | ReasonList | ✅ | - |
+      human_validation: "能看到每个字段都有对应的显示组件，或有合理的不显示原因"
+      mandatory_for: ["MQ3"]
+
+    # 证据类型4：状态流图
+    state_flow_diagram:
+      format: "ASCII图或Mermaid状态图"
+      purpose: "展示状态的来源、存储位置、同步时机"
+      example: |
+        [用户输入] → preferences.allergens (主状态，Source of Truth)
+                      ↓ 同步时机：onSubmit事件
+                   dietaryRestrictions.allergies (备份状态)
+      human_validation: "能看到是否有多处存储、谁是主状态、何时同步"
+      mandatory_for: ["MQ5"]
+
+    # 证据类型5：UI截图
+    ui_screenshot:
+      format: "浏览器截图或UI mockup"
+      purpose: "证明功能的视觉效果"
+      example: "浏览器截图显示推荐理由和警告的视觉层级"
+      human_validation: "能看到实际显示效果，视觉层级清晰"
+      mandatory_for: ["MQ4", "Phase完成报告"]
+
+    # 证据类型6：测试结果
+    test_result:
+      format: "测试运行截图或日志输出"
+      purpose: "证明代码能运行、测试通过"
+      example: |
+        ```
+        ✓ 42 tests passing
+        ✓ Coverage: 87%
+        ```
+      human_validation: "能看到测试通过（passed/绿色✓），覆盖率达标"
+      mandatory_for: ["Phase完成报告"]
+
+# ==================== 强制回答问题系统 ====================
+mandatory_questions:
+  enabled: true
+  blocking: true
+  auto_sync: true
+  source: ".tad/evidence/patterns/failure-patterns.md"
+  description: "从历史失败中提炼的必须回答的问题"
+
+  # 问题库
+  questions:
+    MQ1_historical_code:
+      id: "MQ1"
+      pattern_source: "Failure Pattern 2: Creating Instead of Searching"
+      trigger_keywords: ["之前的", "原来的", "我们的方案", "previous", "original", "existing"]
+      trigger_condition: "用户描述中提到历史方案或现有功能"
+
+      question: "用户提到了历史方案，你找到相关代码了吗？"
+      sub_questions:
+        - "搜索了哪些关键词？"
+        - "找到了什么？在哪里？"
+        - "为什么决定复用/不复用？"
+
+      required_evidence: "search_result"
+      evidence_format: "搜索命令 + 完整输出 + 决策说明"
+      blocking: true
+
+      human_validation_question: "能看到搜索确实执行了吗？决策理由合理吗？"
+
+    MQ2_function_existence:
+      id: "MQ2"
+      pattern_source: "Failure Pattern 3: Function Assumption Errors"
+      trigger_condition: "设计中包含函数调用或组件引用"
+
+      question: "设计中调用了哪些函数/组件？它们都存在吗？"
+      sub_questions:
+        - "列出所有将调用的函数/组件"
+        - "每个函数在哪个文件的第几行？"
+        - "请提供函数定义的代码片段"
+
+      required_evidence: "code_location"
+      evidence_format: "Markdown表格，每个函数/组件都有位置证明"
+      blocking: true
+
+      human_validation_question: "每个函数都有✅存在标记和具体位置吗？"
+
+    MQ3_data_flow:
+      id: "MQ3"
+      pattern_source: "Failure Pattern 4: Incomplete Data Flow"
+      trigger_condition: "后端计算或返回数据给前端"
+
+      question: "后端计算/返回了哪些字段？前端都显示了吗？"
+      sub_questions:
+        - "后端返回的完整字段列表"
+        - "每个字段在前端的哪个组件显示？"
+        - "有没有字段不显示？为什么？"
+
+      required_evidence: "data_flow_diagram"
+      evidence_format: "数据流图（Mermaid）+ 对照表"
+      blocking: true
+
+      human_validation_question: |
+        - 后端每个字段都有对应的前端组件吗？
+        - "❌不显示"的字段有合理原因吗？
+
+    MQ4_visual_hierarchy:
+      id: "MQ4"
+      pattern_source: "Failure Pattern 5: Visual Uniformity Disease"
+      trigger_condition: "功能有多个状态、类型或优先级"
+
+      question: "这个功能有不同的状态/类型吗？用户如何视觉上区分？"
+      sub_questions:
+        - "有哪些不同的状态？（如：推荐/不推荐，成功/失败）"
+        - "每个状态的视觉表现是什么？（颜色、图标、文字）"
+        - "用户能一眼看出区别吗？"
+
+      required_evidence: "ui_screenshot"
+      evidence_format: "UI状态对比表 + 截图/mockup"
+      blocking: false  # 警告但不阻塞
+
+      human_validation_question: "从截图能看出不同状态的明显区别吗？"
+
+    MQ5_state_sync:
+      id: "MQ5"
+      pattern_source: "Real Issue: Dual State Sync Problem"
+      trigger_condition: "涉及用户输入、状态管理或前后端数据传递"
+
+      question: "数据存在几个地方？它们什么时候同步？"
+      sub_questions:
+        - "列出所有存储这个数据的地方（前端state/localStorage/后端session/database）"
+        - "哪个是主状态（Source of Truth）？"
+        - "其他状态什么时候同步？用什么触发？"
+        - "如果忘记同步会怎样？用户会看到什么？"
+
+      required_evidence: "state_flow_diagram"
+      evidence_format: "状态流图，标注主状态、同步时机和触发条件"
+      blocking: true
+
+      human_validation_question: |
+        - 清楚标注哪个是主状态了吗？
+        - 同步时机明确吗？
+        - 或确认只有单一状态？
+
+  # 执行机制
+  enforcement:
+    when: "Gate 2 (Design Completeness)"
+    how: "Alex必须在handoff中包含'强制问题回答'章节"
+    validation: "Human检查每个触发的MQ是否都有回答+证据"
+    consequence_missing: "证据不完整 → 阻止提交handoff，要求补充"
+    consequence_incomplete: "证据质量低 → Human要求重新提供"
+
+  # 自动更新机制
+  auto_update_pipeline:
+    trigger: "Human纠正了AI的错误或发现新的失败模式"
+    process: |
+      1. 捕获错误类型和根因（创建Failure Learning Entry）
+      2. 判断：这个错误应该由哪个MQ拦截？
+      3. 如果现有MQ未覆盖：
+         - 生成新MQ建议（MQ6、MQ7...）
+         - 提交Human审核
+         - 审核通过后自动添加到config.yaml
+      4. 如果现有MQ应该拦截但没拦：
+         - 分析为什么没拦住（trigger条件不够？evidence不够？）
+         - 优化MQ的trigger条件或evidence要求
+         - 更新config.yaml
+    output_location: ".tad/evidence/failures/[timestamp]_mq_update.yaml"
+
+# ==================== 渐进式验证系统 ====================
+progressive_validation:
+  enabled: true
+  description: "将大任务分解为Phase，每个Phase后Human验证"
+
+  phase_structure:
+    definition: |
+      Phase是功能的逻辑组成部分，每个Phase：
+      - 有明确的交付物（代码、文档、测试）
+      - 有独立的验证标准
+      - 完成后需要Human审查才能继续
+
+    size_guideline:
+      small_task: "1个Phase，1-2小时完成"
+      medium_task: "2-3个Phase，每个Phase 2-3小时"
+      large_task: "4-6个Phase，每个Phase不超过4小时"
+
+    mandatory_checkpoint: "每个Phase完成时Blake必须提供证据，Human必须审查"
+
+  phase_evidence_requirements:
+    every_phase_must_provide:
+      - code_screenshot: "关键函数/组件的代码截图"
+      - test_result: "该Phase相关的测试结果"
+      - ui_screenshot: "如果有UI变化，提供浏览器截图"
+      - progress_notes: "遇到的问题和解决方法"
+
+    human_checkpoint_questions:
+      - "这是我期望的方向吗？"
+      - "测试通过了吗？（看到passed/绿色✓）"
+      - "需要调整什么吗？"
+
+    continue_criteria: "Human确认方向正确"
+    adjustment_process: "如果需要调整，Blake修改本Phase后重新提交证据"
+
+  gate_phase_binding:
+    description: "将Quality Gates绑定到Phase"
+
+    gate2_design_phases:
+      phase: "设计阶段各Phase（如果设计分多个Phase）"
+      checkpoint_type: "design_evidence"
+      timing: "每完成一个设计模块"
+      human_action: "审查设计图表和证据"
+
+    gate3_implementation_phases:
+      phase: "实现阶段各Phase"
+      checkpoint_type: "implementation_evidence"
+      timing: "每完成一个Phase"
+      human_action: "审查代码截图、测试结果、UI效果"
+      continue_criteria: "Human确认方向正确才能继续下个Phase"
+
+# ==================== Human角色增强 ====================
+human_role_v13:
+  role_name: "Value Guardian + Checkpoint Validator"
+
+  role_evolution:
+    from: "被动验收者（只在最后验收）"
+    to: "主动验证者（参与设计审查和渐进检查）+ 学习者（每个项目都在成长）"
+
+  responsibilities:
+    value_guardian:
+      tasks:
+        - "定义业务价值和需求"
+        - "验证最终交付的价值"
+        - "做关键业务决策"
+      time_investment: "需求阶段：30-60分钟"
+
+    checkpoint_validator:
+      tasks:
+        - "审查设计阶段的证据（图表、表格）"
+        - "审查实现阶段的证据（截图、测试结果）"
+        - "确认每个Phase方向正确"
+      time_investment: "每个Phase：5-15分钟"
+      skill_required: "不需要技术知识，只需看图判断"
+
+    learner:
+      tasks:
+        - "理解技术决策的权衡（Decision Rationale）"
+        - "思考假设场景（What-If Scenarios）"
+        - "从失败中学习（Failure Learning Entry）"
+      time_investment: "每个功能：20-30分钟（可选）"
+      skill_acquired: "技术决策直觉、系统性思维、质量意识"
+
+  participation_points:
+    gate1_requirements:
+      when: "需求确认完成"
+      human_action: "确认需求理解正确"
+      evidence_to_review: "需求文档"
+      decision: "批准进入设计/要求修改"
+      time_budget: "0分钟（原有流程）"
+
+    gate2_design:
+      when: "设计完成，创建handoff前"
+      human_action: "审查设计证据"
+      evidence_to_review:
+        - "强制问题（MQ1-5）的回答+证据"
+        - "数据流图和对照表"
+        - "状态流图"
+        - "函数位置证明表"
+      questions_to_answer:
+        - "证据完整吗？有没有空着的？"
+        - "数据流图显示后端字段都传到前端了吗？"
+        - "状态流图显示数据只存一个地方，或同步机制清晰吗？"
+        - "方向看起来正确吗？"
+      decision: "通过→继续 / 不通过→Alex补充证据"
+      time_budget: "10-15分钟"
+
+    phase_checkpoints:
+      when: "Blake完成每个Phase"
+      human_action: "快速审查Phase交付物"
+      evidence_to_review:
+        - "代码截图（关键函数）"
+        - "测试结果截图"
+        - "UI截图（如果有UI）"
+      questions_to_answer:
+        - "这是我期望的方向吗？"
+        - "测试通过了吗？"
+        - "UI显示正确吗？"
+      decision: "继续→下个Phase / 调整→修改本Phase"
+      time_budget: "5-10分钟/Phase"
+
+    gate3_implementation:
+      when: "所有Phase完成"
+      human_action: "最终验证"
+      evidence_to_review:
+        - "完整的测试报告"
+        - "完整的UI截图"
+        - "性能测试结果（如需要）"
+      decision: "通过→交付 / 问题→修复"
+      time_budget: "10-15分钟"
+
+  total_time_investment:
+    per_feature:
+      gate2: "10-15分钟"
+      phase_checkpoints: "5-10分钟 × Phase数量"
+      gate3: "10-15分钟"
+      learning_optional: "20-30分钟"
+      total_example: "小功能约30分钟，中功能约60分钟，大功能约90分钟"
+
+    value_proposition: |
+      投入30-60分钟的审查+学习，可以：
+      - 提前发现方向错误（节省3-6小时返工）
+      - 减少最后阶段的大量修改
+      - 确保实现符合真正意图，不是字面意思
+      - 建立技术决策直觉，长期受益
+
+# ==================== 学习机制系统 ====================
+learning_mechanisms:
+  enabled: true
+  description: "TAD不仅帮助Human执行项目，更帮助Human建立系统性思维和决策直觉"
+
+  philosophy: |
+    传统培训：读书 → 理解概念 → 应用（断层）
+    TAD学习：真实决策 → 看到后果 → 建立直觉 → 自然应用
+
+  learning_dimensions:
+    dimension1_technical_tradeoffs:
+      name: "技术决策权衡思维"
+      goal: "建立'没有完美方案，只有权衡'的思维"
+      levels:
+        - "Level 1: 知道有多个方案可选"
+        - "Level 2: 理解每个方案的优缺点"
+        - "Level 3: 能判断在当前场景下哪个更合适"
+        - "Level 4: 能预见未来场景变化时需要切换方案"
+      mechanisms: ["Decision Rationale", "Interactive Challenge"]
+
+    dimension2_systemic_thinking:
+      name: "系统性思维"
+      goal: "看到'局部改动'如何影响'整个系统'"
+      levels:
+        - "Level 1: 知道'改A会影响B'"
+        - "Level 2: 能画出影响链路（A → B → C）"
+        - "Level 3: 能预见第二层影响"
+        - "Level 4: 能设计'改A但不影响B'的隔离机制"
+      mechanisms: ["Impact Visualization", "What-If Scenarios"]
+
+    dimension3_product_ux:
+      name: "产品/UX直觉"
+      goal: "理解'用户看到什么'和'用户感受到什么'"
+      levels:
+        - "Level 1: 知道UI要好看"
+        - "Level 2: 理解不同视觉设计传达不同信息"
+        - "Level 3: 能判断哪个设计更符合用户任务"
+        - "Level 4: 能从用户行为数据推断UI问题"
+      mechanisms: ["What-If Scenarios", "Decision Rationale"]
+
+    dimension4_quality_awareness:
+      name: "质量意识和风险预见"
+      goal: "理解'什么地方容易出错'和'如何提前防御'"
+      levels:
+        - "Level 1: 知道要测试"
+        - "Level 2: 知道测试什么（边界情况、错误路径）"
+        - "Level 3: 能预见'改这里可能影响那里'"
+        - "Level 4: 能设计'防御性架构'（出错了也不会雪崩）"
+      mechanisms: ["Failure Learning Entry", "What-If Scenarios"]
+
+  mechanisms:
+    mechanism1_decision_rationale:
+      name: "Decision Rationale（决策理由）"
+      goal: "理解为什么选A不选B，建立权衡思维"
+      timing: "每个重要技术决策"
+      format: "对比表格 + 权衡分析 + 未来切换条件"
+      time_cost: "+5分钟"
+      learning_dimensions: ["技术决策", "系统思维"]
+
+    mechanism2_interactive_challenge:
+      name: "Interactive Challenge（互动挑战）"
+      goal: "让Human主动思考，而非被动接受答案"
+      timing: "关键决策点，在Alex给出方案之前"
+      format: "场景描述 + 备选方案 + 思考问题 → Alex分析"
+      time_cost: "+3分钟"
+      learning_dimensions: ["所有维度"]
+
+    mechanism3_impact_visualization:
+      name: "Impact Visualization（影响可视化）"
+      goal: "看到改动的连锁反应"
+      timing: "架构设计或数据流变更"
+      format: "影响链路图（Mermaid）+ 影响清单（3层）"
+      time_cost: "+2分钟"
+      learning_dimensions: ["系统思维"]
+
+    mechanism4_what_if_scenarios:
+      name: "What-If Scenarios（假设场景）"
+      goal: "通过对比理解为什么这样做"
+      timing: "每个Phase完成"
+      format: "实际方案 vs 替代方案的效果对比"
+      time_cost: "+3分钟"
+      learning_dimensions: ["所有维度"]
+
+    mechanism5_failure_learning:
+      name: "Failure Learning Entry（失败学习）"
+      goal: "每次出错都是学习机会，避免重复犯错"
+      timing: "Human发现问题、测试失败、用户报告Bug"
+      format: "根因分析 + 提炼原则 + 更新检查点"
+      time_cost: "+10分钟（但避免未来重复）"
+      learning_dimensions: ["质量意识"]
+
+  learning_metrics:
+    short_term:
+      participation_rate:
+        gate2_review_completion: ">90%"
+        interactive_challenge_response: ">80%"
+
+      understanding:
+        decision_rationale_understanding: "能说出2+个权衡维度"
+        gate2_issue_detection: "每个功能至少发现1个问题"
+
+    mid_term:
+      knowledge_reuse:
+        checklist_application: "主动使用上个项目的检查清单"
+        principle_recall: "能举例之前学到的原则"
+
+      independent_judgment:
+        level: "Human开始在Alex提出前就有判断"
+
+    long_term:
+      systemic_thinking:
+        impact_chain_length: "能预见1层/2层/3层影响"
+        failure_pattern_recognition: "能识别3+种失败模式"
+
+      quality_awareness:
+        edge_case_consideration: "主动提出边界情况"
+
+  learning_loop_completion:
+    signal: |
+      项目1 → 学到"单一数据源原则" → 更新MQ5
+             ↓
+      项目2 → Human主动问"数据存几个地方？"
+             → 设计时就避免了问题 ✅
+
+# ==================== Sub-Agent强制使用 ====================
+subagent_enforcement_v13:
+  enabled: true
+  description: "从建议变成强制，带证据验证"
+
+  agent_a_mandatory:
+    product_expert:
+      when: "需求分析阶段（Round 1后）"
+      must_call: true
+      evidence_required: "在需求文档中包含product-expert的分析结果"
+      evidence_format: "用户画像、用例分析、业务价值评估"
+      violation_action: "阻止进入设计阶段"
+
+    backend_architect:
+      when: "设计系统架构（涉及API/数据库/微服务等）"
+      must_call: true
+      evidence_required: "在设计文档中包含backend-architect的建议"
+      evidence_format: "架构图、技术选型、扩展性分析"
+      violation_action: "阻止创建handoff"
+
+    code_reviewer:
+      when: "审查Blake的实现"
+      must_call: true
+      evidence_required: "在审查报告中包含code-reviewer的发现"
+      evidence_format: "代码质量评分、问题列表、改进建议"
+      violation_action: "阻止标记为完成"
+
+  agent_b_mandatory:
+    parallel_coordinator:
+      when: "任务包含3个以上独立组件"
+      must_call: true
+      detection: "自动检测handoff中的Phase数量≥3"
+      evidence_required: "在完成报告中说明如何使用parallel-coordinator"
+      evidence_format: "任务分解、并行执行计划、协调机制"
+      violation_action: "警告并要求说明为什么不用"
+
+    bug_hunter:
+      when: "出现错误或测试失败"
+      must_call: true
+      detection: "自动检测错误日志或测试失败"
+      evidence_required: "在修复报告中包含bug-hunter的诊断"
+      evidence_format: "根因分析、修复方案、预防措施"
+      violation_action: "阻止标记为修复完成"
+
+    test_runner:
+      when: "完成实现"
+      must_call: true
+      detection: "Phase完成时"
+      evidence_required: "测试结果截图或报告"
+      evidence_format: "测试通过率、覆盖率、失败case"
+      violation_action: "阻止进入下个Phase"
+
+  evidence_format:
+    subagent_usage_log: |
+      ## Sub-Agent使用记录
+
+      | Sub-Agent | 是否调用 | 调用时机 | 输出摘要 | 证据链接 |
+      |-----------|---------|---------|---------|---------|
+      | product-expert | ✅ | Round 1后 | 识别了3个关键用例 | [链接到分析文档] |
+      | backend-architect | ✅ | 设计阶段 | 建议使用Two-phase架构 | [链接到架构图] |
+      | parallel-coordinator | ❌ | N/A | 任务只有2个组件，不需要 | N/A |
+
+  human_verification:
+    what_to_check: "Sub-Agent使用记录表是否完整"
+    red_flags:
+      - "应该调用但标记为'❌'且无合理原因"
+      - "调用了但'输出摘要'为空"
+      - "'证据链接'都是N/A"
+
+# ==================== 时间估算改进 ====================
+time_estimation_v13:
+  principle: "估算实现时间 × 2 = 实际预算时间"
+  reason: "考虑审查、迭代、意外问题、文档"
+
+  buffer_allocation:
+    implementation: 0.40  # 纯编码时间
+    review_iteration: 0.30  # Human审查和返工
+    unexpected_issues: 0.20  # 意外问题处理
+    documentation: 0.10  # 文档和报告
+
+  checkpoint_timing:
+    rule: "在50%估算时间时，强制Human审查"
+    purpose: "及早发现方向偏差，避免全部返工"
+    example: |
+      估算：8小时
+      实际预算：16小时
+      强制检查点：4小时和12小时
+
+      在4小时时：
+      - Blake展示已完成的部分
+      - Human确认方向正确
+      - 如果方向错误，只浪费了4小时，不是16小时
+
+  tracking:
+    record:
+      - estimated_time: "估算时间"
+      - actual_time: "实际花费"
+      - deviation_reason: "偏差原因分类"
+    improve:
+      - "分析偏差原因"
+      - "调整未来估算系数"
+      - "识别常见延误因素"
+
+# ==================== 失败学习闭环 ====================
+failure_learning_loop:
+  enabled: true
+  description: "每次失败自动转化为未来的检查点"
+
+  trigger: "Human纠正AI错误，或发现Bug，或测试失败"
+
+  pipeline_steps:
+    step1_capture:
+      trigger: "Human说'不对'、'错了'、'这个有问题'"
+      action: "创建Failure Learning Entry"
+      data_to_capture:
+        - error_type: "技术问题类型"
+        - root_cause: "为什么发生"
+        - should_be_caught_by: "应该由哪个Gate/MQ拦截"
+        - actual_outcome: "实际上放行了"
+        - user_impact: "给用户造成的影响"
+      output_file: ".tad/evidence/failures/[timestamp]_failure.yaml"
+
+    step2_analyze:
+      action: "分析应该增加什么检查点"
+      analysis_questions:
+        - "这个问题属于哪个阶段？（需求/设计/实现）"
+        - "现有的MQ能拦截吗？如果不能，为什么？"
+        - "需要什么证据才能提前发现？"
+        - "Human需要看什么才能判断？"
+      output_file: ".tad/evidence/failures/[timestamp]_analysis.yaml"
+
+    step3_propose:
+      action: "生成配置更新建议"
+      proposal_content:
+        new_mq:
+          id: "MQ[X]"
+          question: "[生成的问题]"
+          required_evidence: "[证据类型]"
+          human_validation_point: "[Human看什么]"
+        or_mq_update:
+          existing_mq: "MQ[Y]"
+          enhancement: "[如何增强]"
+          new_trigger: "[更准确的触发条件]"
+      output_file: ".tad/evidence/failures/[timestamp]_proposal.yaml"
+
+    step4_review:
+      action: "Human审核提案"
+      human_questions:
+        - "这个新检查点合理吗？"
+        - "会不会产生太多误报？"
+        - "我能看懂这个证据吗？"
+      decision:
+        approve: "自动更新config.yaml"
+        reject: "记录原因，不更新"
+        modify: "Human修改后更新"
+
+    step5_implement:
+      action: "自动更新配置文件"
+      files_to_update:
+        - ".tad/config.yaml"  # 添加/更新MQ
+        - ".tad/templates/handoff-a-to-b.md"  # 更新模板
+        - ".tad/evidence/patterns/failure-patterns.md"  # 更新记录
+      notification: "配置已自动更新，下个项目生效"
+      changelog: "记录在.tad/CHANGELOG.md"
+
+  metrics_tracking:
+    track:
+      - "failure_count": "总失败次数"
+      - "failures_prevented": "新MQ拦截的失败"
+      - "false_positive_rate": "误报率"
+      - "mq_effectiveness": "每个MQ的有效性"
+    report_location: ".tad/evidence/metrics/learning-effectiveness.md"
+
+# ==================== 配置生效时间 ====================
+rollout_plan:
+  phase1_immediate:
+    description: "可以立即启用的增强"
+    items:
+      - "mandatory_questions"
+      - "evidence_based_verification"
+      - "human_role_v13"
+    risk: "低"
+    time: "1-2天"
+
+  phase2_gradual:
+    description: "需要逐步推进的增强"
+    items:
+      - "progressive_validation"
+      - "learning_mechanisms"
+      - "subagent_enforcement_v13"
+    risk: "中"
+    time: "1-2周"
+
+  phase3_advanced:
+    description: "需要工具支持的增强"
+    items:
+      - "failure_learning_loop"
+      - "time_estimation_v13"
+    risk: "低（可选）"
+    time: "1个月"
+
+# ==================== 版本控制 ====================
+version_history:
+  v1.3.0:
+    date: "2025-11-25"
+    changes:
+      - "新增证据式验证系统（5种证据类型）"
+      - "新增强制问题系统（MQ1-5）"
+      - "新增渐进式验证（Phase检查点）"
+      - "新增Human角色增强（Checkpoint Validator）"
+      - "新增学习机制系统（5种机制）"
+      - "新增失败学习闭环"
+    based_on: "MenuSnap项目实证分析 + 三份核心文档"
+    compatibility: "100%向后兼容v1.2"
+
+  v1.2:
+    date: "2024-XX-XX"
+    description: "基础TAD方法论"
+
+# ==================== 兼容性说明 ====================
+backward_compatibility:
+  v12_projects:
+    compatibility: "100%兼容"
+    explanation: "v1.3是增量更新，不破坏v1.2的任何功能"
+    migration: "可以选择性启用v1.3特性"
+
+  rollback_support:
+    enabled: true
+    method: "恢复备份的.tad/config.yaml.v1.2"
+    data_preservation: "v1.3创建的证据文档保留，不影响回滚"

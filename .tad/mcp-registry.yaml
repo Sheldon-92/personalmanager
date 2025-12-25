@@ -1,0 +1,433 @@
+# TAD Framework MCP Tool Registry
+# Version: 1.2 (MCP Integration)
+# 定义三层 MCP 工具架构和使用规则
+
+version: "1.2"
+description: "MCP Tool Registry for TAD Framework - Three-Layer Architecture"
+last_updated: "2025-01-30"
+
+# ==================== 三层 MCP 架构 ====================
+mcp_layers:
+
+  # Layer 1: 核心层 - 所有项目必装
+  core:
+    description: "Essential tools for all projects, always enabled"
+    install_timing: "TAD framework initialization"
+    auto_enable: true
+    total_count: 7
+
+    tools:
+      - name: "context7"
+        priority: "⭐⭐⭐"
+        purpose: "实时获取最新框架文档"
+        provider: "Upstash"
+        efficiency_gain: "90-95%"
+        auto_trigger_keywords: ["Next.js", "React", "Vue", "Tailwind", "TypeScript", "框架", "库"]
+
+      - name: "sequential-thinking"
+        priority: "⭐⭐⭐"
+        purpose: "复杂问题分解和结构化推理"
+        provider: "Anthropic Official"
+        efficiency_gain: "60-70%"
+        auto_trigger_keywords: ["复杂", "架构", "系统设计", "算法"]
+
+      - name: "memory-bank"
+        priority: "⭐⭐⭐"
+        purpose: "项目历史决策和上下文记忆"
+        provider: "Anthropic Official"
+        efficiency_gain: "70-80%"
+        mandatory_call: ["需求分析开始", "设计阶段", "回顾决策"]
+
+      - name: "filesystem"
+        priority: "⭐⭐⭐"
+        purpose: "文件和目录操作"
+        provider: "Anthropic Official"
+        efficiency_gain: "基础必备"
+        agent: "Blake"
+
+      - name: "git"
+        priority: "⭐⭐⭐"
+        purpose: "版本控制操作"
+        provider: "Anthropic Official"
+        efficiency_gain: "基础必备"
+        agent: "Blake"
+
+      - name: "github"
+        priority: "⭐⭐⭐"
+        purpose: "GitHub 协作(PR/Issue/CI)"
+        provider: "Anthropic Official"
+        efficiency_gain: "80-85%"
+        agent: "Alex + Blake"
+
+      - name: "brave-search"
+        priority: "⭐⭐⭐"
+        purpose: "隐私优先的技术研究"
+        provider: "Brave"
+        efficiency_gain: "技术研究必备"
+        free_tier: "2000次/月"
+
+  # Layer 2: 项目层 - 按项目类型安装
+  project:
+    description: "Project-type specific tools, installed after detection"
+    install_timing: "After project type detection (by Alex in Round 2)"
+    auto_enable: true
+
+    presets:
+      web_fullstack:
+        description: "现代 Web 全栈应用"
+        confidence_threshold: 0.7
+        tools:
+          - name: "supabase"
+            priority: "⭐⭐⭐"
+            purpose: "全栈 serverless 后端"
+            trigger: ["Supabase", "数据库", "认证", "存储"]
+
+          - name: "playwright"
+            priority: "⭐⭐"
+            purpose: "E2E 浏览器自动化测试"
+            trigger: ["测试", "E2E", "自动化"]
+
+          - name: "vercel"
+            priority: "⭐⭐"
+            purpose: "部署和托管"
+            trigger: ["Vercel", "部署", "上线"]
+
+          - name: "react-mcp"
+            priority: "⭐"
+            purpose: "React 组件开发"
+            trigger: ["React", "组件", "前端"]
+
+      data_science:
+        description: "数据分析和可视化项目"
+        confidence_threshold: 0.6
+        tools:
+          - name: "jupyter"
+            priority: "⭐⭐⭐"
+            purpose: "交互式数据分析"
+            trigger: ["数据分析", "Jupyter", "notebook"]
+
+          - name: "pandas-mcp"
+            priority: "⭐⭐"
+            purpose: "数据处理和清洗"
+            trigger: ["pandas", "数据处理", "CSV"]
+
+          - name: "antv-chart"
+            priority: "⭐⭐"
+            purpose: "数据可视化"
+            trigger: ["图表", "可视化", "仪表板"]
+
+          - name: "postgres-mcp-pro"
+            priority: "⭐⭐"
+            purpose: "数据库性能优化"
+            trigger: ["PostgreSQL", "性能优化", "慢查询"]
+
+      machine_learning:
+        description: "机器学习和 AI 项目"
+        confidence_threshold: 0.8
+        tools:
+          - name: "jupyter"
+            priority: "⭐⭐⭐"
+            purpose: "ML 实验环境"
+
+          - name: "optuna"
+            priority: "⭐⭐⭐"
+            purpose: "超参数自动优化"
+            trigger: ["训练", "超参数", "优化"]
+
+          - name: "huggingface"
+            priority: "⭐⭐⭐"
+            purpose: "模型发现和下载"
+            trigger: ["模型", "HuggingFace", "预训练"]
+
+          - name: "zenml"
+            priority: "⭐⭐"
+            purpose: "MLOps 管道管理"
+            trigger: ["部署", "管道", "生产"]
+
+          - name: "mlflow"
+            priority: "⭐"
+            purpose: "实验追踪"
+            trigger: ["实验", "追踪", "指标"]
+
+      devops:
+        description: "DevOps 和基础设施项目"
+        confidence_threshold: 0.7
+        tools:
+          - name: "kubernetes"
+            priority: "⭐⭐⭐"
+            purpose: "容器编排"
+            trigger: ["K8s", "Kubernetes", "pod", "deployment"]
+
+          - name: "docker"
+            priority: "⭐⭐"
+            purpose: "容器管理"
+            trigger: ["Docker", "容器", "镜像"]
+
+          - name: "aws"
+            priority: "⭐⭐"
+            purpose: "AWS 资源管理"
+            trigger: ["AWS", "云", "EC2", "S3"]
+
+          - name: "terminal"
+            priority: "⭐⭐⭐"
+            purpose: "Shell 命令执行"
+            trigger: ["命令", "脚本", "bash"]
+
+          - name: "netdata"
+            priority: "⭐"
+            purpose: "监控和告警"
+            trigger: ["监控", "性能", "告警"]
+
+      creative:
+        description: "创意和多媒体项目"
+        confidence_threshold: 0.7
+        tools:
+          - name: "figma"
+            priority: "⭐⭐⭐"
+            purpose: "设计转代码"
+            trigger: ["Figma", "设计", "UI"]
+
+          - name: "video-audio-mcp"
+            priority: "⭐⭐"
+            purpose: "视频音频编辑"
+            trigger: ["视频", "音频", "编辑"]
+
+          - name: "adobe-mcp"
+            priority: "⭐⭐"
+            purpose: "Adobe 工具自动化"
+            trigger: ["Photoshop", "Premiere", "PS", "PR"]
+
+  # Layer 3: 任务层 - 临时按需安装
+  task:
+    description: "Temporary tools for specific tasks"
+    install_timing: "On-demand during development"
+    auto_enable: false
+    auto_uninstall_prompt: true
+
+    tools:
+      - name: "videodb"
+        purpose: "高级 AI 视频处理"
+        trigger: ["视频转录", "语义搜索", "配音"]
+
+      - name: "design-system-extractor"
+        purpose: "设计系统提取"
+        trigger: ["Storybook", "设计令牌", "组件库"]
+
+      - name: "pyairbyte"
+        purpose: "ETL 数据管道"
+        trigger: ["ETL", "数据同步", "管道"]
+
+      - name: "mongodb"
+        purpose: "MongoDB 数据库(临时)"
+        trigger: ["MongoDB", "NoSQL"]
+
+# ==================== 项目类型检测规则 ====================
+detection_rules:
+  web_fullstack:
+    indicators:
+      keywords:
+        - "Next.js"
+        - "React"
+        - "Vue"
+        - "web"
+        - "网站"
+        - "前端"
+        - "后端"
+        - "全栈"
+        - "Supabase"
+        - "Vercel"
+      files:
+        - "package.json"
+        - "next.config.js"
+        - "tsconfig.json"
+        - "vite.config.js"
+    confidence_threshold: 0.7
+
+  data_science:
+    indicators:
+      keywords:
+        - "数据分析"
+        - "可视化"
+        - "pandas"
+        - "jupyter"
+        - "图表"
+        - "数据处理"
+        - "CSV"
+        - "Excel"
+      files:
+        - "*.ipynb"
+        - "requirements.txt"
+        - "data/"
+        - "notebooks/"
+    confidence_threshold: 0.6
+
+  machine_learning:
+    indicators:
+      keywords:
+        - "机器学习"
+        - "模型"
+        - "训练"
+        - "AI"
+        - "深度学习"
+        - "神经网络"
+        - "预测"
+        - "分类"
+      files:
+        - "train.py"
+        - "model.py"
+        - "*.ipynb"
+        - "models/"
+    confidence_threshold: 0.8
+
+  devops:
+    indicators:
+      keywords:
+        - "容器"
+        - "K8s"
+        - "Kubernetes"
+        - "Docker"
+        - "部署"
+        - "CI/CD"
+        - "基础设施"
+        - "DevOps"
+      files:
+        - "Dockerfile"
+        - "k8s/"
+        - "kubernetes/"
+        - ".github/workflows/"
+        - "docker-compose.yml"
+    confidence_threshold: 0.7
+
+  creative:
+    indicators:
+      keywords:
+        - "设计"
+        - "Figma"
+        - "视频"
+        - "音频"
+        - "创意"
+        - "多媒体"
+        - "UI/UX"
+      files:
+        - ".fig"
+        - "*.psd"
+        - "*.prproj"
+        - "assets/video/"
+        - "design/"
+    confidence_threshold: 0.7
+
+# ==================== MCP 配置模板 ====================
+mcp_config_templates:
+  core_layer:
+    location: ".tad/mcp-config.json"
+    format: "Claude Desktop Config Format"
+    template: |
+      {
+        "mcpServers": {
+          "context7": {
+            "command": "npx",
+            "args": ["-y", "@upstash/context7-mcp@latest"],
+            "layer": "core",
+            "always_enabled": true
+          },
+          "sequential-thinking": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+            "layer": "core",
+            "always_enabled": true
+          },
+          "memory-bank": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-memory"],
+            "layer": "core",
+            "always_enabled": true
+          },
+          "filesystem": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-filesystem", "${PROJECT_ROOT}"],
+            "layer": "core",
+            "always_enabled": true
+          },
+          "git": {
+            "command": "uvx",
+            "args": ["mcp-server-git", "--repository", "${PROJECT_ROOT}"],
+            "layer": "core",
+            "always_enabled": true
+          },
+          "github": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-github"],
+            "layer": "core",
+            "always_enabled": true,
+            "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"}
+          },
+          "brave-search": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+            "layer": "core",
+            "always_enabled": true,
+            "env": {"BRAVE_API_KEY": "${BRAVE_KEY}"}
+          }
+        }
+      }
+
+# ==================== CLI 命令定义 ====================
+cli_commands:
+  install_core:
+    command: "tad mcp install --core"
+    description: "安装核心 7 个 MCP 工具"
+
+  install_preset:
+    command: "tad mcp install --preset <preset_name>"
+    description: "安装项目类型预设"
+    options: ["web_fullstack", "data_science", "machine_learning", "devops", "creative"]
+
+  install_single:
+    command: "tad mcp install <mcp_name>"
+    description: "安装单个 MCP 工具"
+
+  list_available:
+    command: "tad mcp list"
+    description: "列出所有可用 MCP 工具"
+
+  list_installed:
+    command: "tad mcp list --installed"
+    description: "列出已安装的 MCP 工具"
+
+  uninstall:
+    command: "tad mcp uninstall <mcp_name>"
+    description: "卸载 MCP 工具"
+
+  detect_project:
+    command: "tad mcp detect"
+    description: "检测项目类型并推荐 MCP"
+
+# ==================== 安全配置 ====================
+security:
+  auto_approve_readonly: true
+
+  auto_approve_safe_commands:
+    - "git status"
+    - "git diff"
+    - "git log"
+    - "ls"
+    - "cat"
+    - "grep"
+    - "npm install"
+    - "SELECT * FROM" # 只读数据库查询
+
+  always_confirm:
+    - "git push"
+    - "git push --force"
+    - "rm -rf"
+    - "DROP TABLE"
+    - "DELETE FROM"
+    - "UPDATE"
+    - "kubectl delete"
+    - "docker rm"
+    - "vercel deploy --prod"
+
+  whitelist_mode:
+    terminal_commands:
+      enabled: true
+      allowed: ["npm", "git", "docker", "kubectl", "python", "node"]
