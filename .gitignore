@@ -29,9 +29,13 @@ venv/
 # Local agents / editors (machine-specific)
 .bmad-core/
 .bmad-*/
-.claude/
 .gemini/
 .obsidian/
+
+# Claude Code - 只忽略本地设置，保留 commands
+.claude/settings.local.json
+.claude/settings.json
+# .claude/commands/ 需要同步，不忽略
 
 # Reports with local paths / env details
 docs/reports/
@@ -56,9 +60,6 @@ Personal Manager Test/
 
 # TAD Framework - 全部纳入版本控制
 # (不忽略任何 .tad/ 内容)
-
-# Local settings
-.claude/settings.local.json
 
 # ==================== v0.5.0+ 清理新增 ====================
 
