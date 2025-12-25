@@ -5,16 +5,21 @@
 
 ## 本周
 - [ ] 在其他项目中创建 NEXT.md
+- [ ] 测试 `/gh-sync` 多设备同步功能
+- [ ] 验证 launchd 自动同步服务运行正常
 
 ## 待定
 - [ ] 完善时间标签解析（@日期 @时间）
-- [ ] 自动后台同步机制
+- [ ] 添加新项目时自动更新 launchd WatchPaths
 
 ## 阻塞
 （暂无）
 
 ## 已完成
 ### 2025-W52
+- [x] 设置 launchd 自动同步服务 (com.pm.autosync) ✓12-24
+- [x] 创建 `/gh-sync` Claude Code Skill ✓12-24
+- [x] 配置 GitHub CLI 认证 (gh auth login) ✓12-24
 - [x] 实现 `pm next --push` 推送任务到 Google Tasks ✓12-24
 - [x] 实现 `pm next --pull` 从 Google Tasks 拉取完成状态 ✓12-24
 - [x] 创建 MASTER.md 汇总机制 ✓12-24

@@ -1,0 +1,51 @@
+#!/bin/bash
+# pm-auto-sync - 自动同步 NEXT.md 到 Google Tasks
+#
+# 当任何项目的 NEXT.md 文件变化时触发
+# 由 launchd 服务调用
+
+set -e
+
+# 配置
+PROJECTS_PATH="$HOME/01-on progress programs"
+PM_PATH="$PROJECTS_PATH/personal-manager"
+LOG_FILE="$PM_PATH/.pm-sync.log"
+LOCK_FILE="/tmp/pm-auto-sync.lock"
+
+# 防重复运行
+if [ -f "$LOCK_FILE" ]; then
+    # 检查锁文件是否超过 5 分钟（过期锁）
+    if [ $(find "$LOCK_FILE" -mmin +5 2>/dev/null) ]; then
+        rm -f "$LOCK_FILE"
+    else
+        echo "$(date): Sync already running, skipping" >> "$LOG_FILE"
+        exit 0
+    fi
+fi
+
+# 创建锁文件
+touch "$LOCK_FILE"
+trap "rm -f $LOCK_FILE" EXIT
+
+# 记录日志
+echo "" >> "$LOG_FILE"
+echo "========================================" >> "$LOG_FILE"
+echo "$(date): Auto-sync triggered" >> "$LOG_FILE"
+
+# 等待 2 秒（防抖动，让编辑器完成保存）
+sleep 2
+
+# 执行同步
+cd "$PM_PATH"
+export PYTHONPATH="$PM_PATH/src"
+
+echo "$(date): Running pm next --push..." >> "$LOG_FILE"
+python3 -m pm.cli.main next --push --path "$PROJECTS_PATH" >> "$LOG_FILE" 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "$(date): Sync completed successfully" >> "$LOG_FILE"
+else
+    echo "$(date): Sync failed with error" >> "$LOG_FILE"
+fi
+
+echo "========================================" >> "$LOG_FILE"
