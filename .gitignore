@@ -54,15 +54,11 @@ npm/**/dist/
 npm/**/*.tgz
 Personal Manager Test/
 
-# TAD Framework - 只忽略临时文件，保留过程文档
-.tad/logs/
-.tad/working/*.tmp
+# TAD Framework - 全部纳入版本控制
+# (不忽略任何 .tad/ 内容)
 
 # Local settings
 .claude/settings.local.json
-
-# MCP (Model Context Protocol) - 本地配置
-.tad/mcp-config.json
 
 # ==================== v0.5.0+ 清理新增 ====================
 

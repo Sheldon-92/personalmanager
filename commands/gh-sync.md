@@ -211,10 +211,8 @@ secrets/
 *.dll
 *.dylib
 
-# TAD Framework - 只忽略临时文件，保留过程文档
-.tad/logs/
-.tad/working/*.tmp
-.tad/mcp-config.json
+# TAD Framework - 全部纳入版本控制，不忽略
+# (保留所有过程文件：handoffs, evidence, logs, context)
 ```
 
 ### 阶段 2.5: TAD .gitignore 检查（新增）
@@ -222,17 +220,12 @@ secrets/
 如果项目已有 `.gitignore`，检查是否正确配置 TAD：
 
 1. **检查 .gitignore 中的 TAD 规则**
-   - 如果发现 `.tad/` 被完全忽略（如 `.tad/` 或 `.tad/*`），提示用户
-   - 建议修改为只忽略临时文件：
-     ```
-     .tad/logs/
-     .tad/working/*.tmp
-     .tad/mcp-config.json
-     ```
+   - 如果发现任何忽略 `.tad/` 的规则（如 `.tad/`, `.tad/*`, `.tad/logs/` 等），提示用户
+   - 建议：移除所有 `.tad/` 相关的忽略规则，让全部内容被版本控制
 
 2. **自动修复选项**
-   - 询问用户："检测到 .gitignore 可能忽略了 TAD 过程文件，是否自动修复？(Y/n)"
-   - 如果同意，移除过于宽泛的 `.tad/` 规则，添加精确规则
+   - 询问用户："检测到 .gitignore 忽略了 TAD 文件，是否移除这些规则？(Y/n)"
+   - 如果同意，移除所有 `.tad` 相关的忽略规则
 
 ## 安全注意事项
 
